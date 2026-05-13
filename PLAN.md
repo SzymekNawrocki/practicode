@@ -12,9 +12,9 @@ An open-source AI-assisted software engineering knowledge platform. Developers p
 
 ## Current Status
 
-**Phase:** 1 — Foundation (in progress)
+**Phase:** 1 — Foundation ✅ Complete
 
-Scaffold complete. Next.js 16.2.6, shadcn/ui, Drizzle, Supabase, Tiptap, Zod, React Query, Zustand all installed. CLAUDE.md and PLAN.md created. Database schema and auth still to be wired.
+All 7 Phase 1 steps implemented and committed. The app is fully runnable: login → knowledge CRUD with Tiptap editor → AI extraction via OpenRouter streaming → context pack export. Next: Phase 2 (relationships UI, pgvector, user roles).
 
 ---
 
@@ -24,76 +24,49 @@ Scaffold complete. Next.js 16.2.6, shadcn/ui, Drizzle, Supabase, Tiptap, Zod, Re
 - [x] Create `CLAUDE.md` with full codebase context
 - [x] Create `PLAN.md` (this file)
 
-### Step 2: Database Foundation
-- [ ] Add `DATABASE_URL` and `DATABASE_DIRECT_URL` to `.env`
-- [ ] Add `OPENROUTER_API_KEY` to `.env`
-- [ ] Create `lib/env.ts` — Zod-validated env vars
-- [ ] Create `db/schema/users.ts`
-- [ ] Create `db/schema/categories.ts`
-- [ ] Create `db/schema/tags.ts`
-- [ ] Create `db/schema/knowledge.ts` (core entity + CodeExample type)
-- [ ] Create `db/schema/tags-junction.ts`
-- [ ] Create `db/schema/relationships.ts`
-- [ ] Create `db/schema/ai-drafts.ts`
-- [ ] Create `db/schema/index.ts` (barrel)
-- [ ] Create `db/client.ts` (singleton, HMR-safe)
-- [ ] Create `drizzle.config.ts`
-- [ ] Run `npx drizzle-kit generate`
-- [ ] Run `npx drizzle-kit migrate`
+### Step 2: Database Foundation ✅
+- [x] `lib/env.ts` — Zod-validated env vars
+- [x] Full Drizzle schema (7 tables, 4 enums, all FKs)
+- [x] `db/client.ts` singleton with PgBouncer `prepare: false`
+- [x] `drizzle.config.ts`
+- [x] Migration generated + applied to Supabase
 
-### Step 3: Auth
-- [ ] Create `lib/supabase/server.ts` — async cookies pattern
-- [ ] Create `lib/supabase/client.ts` — browser client
-- [ ] Create `proxy.ts` — Next.js 16 auth guard (NOT middleware.ts)
-- [ ] Create `app/(auth)/layout.tsx`
-- [ ] Create `app/(auth)/login/page.tsx`
-- [ ] Create `modules/auth/actions/auth.actions.ts` (signIn, signOut)
-- [ ] Create `modules/auth/components/LoginForm.tsx`
-- [ ] Create `app/api/auth/callback/route.ts`
+### Step 3: Auth ✅
+- [x] `lib/supabase/server.ts` — async `await cookies()` (Next.js 16)
+- [x] `lib/supabase/client.ts`
+- [x] `proxy.ts` — Next.js 16 auth guard (named export `proxy`)
+- [x] Login page with sign-in + sign-up (email/password)
+- [x] `app/api/auth/callback/route.ts`
 
-### Step 4: Knowledge CRUD
-- [ ] Create `modules/knowledge/schemas/knowledge.schema.ts` (Zod)
-- [ ] Create `modules/knowledge/types/knowledge.types.ts`
-- [ ] Create `modules/knowledge/services/knowledge.service.ts` (Drizzle queries)
-- [ ] Create `modules/knowledge/actions/knowledge.actions.ts` (create, update, delete, publish)
-- [ ] Create `app/(dashboard)/layout.tsx` (sidebar + nav + QueryClientProvider)
-- [ ] Create `app/(dashboard)/page.tsx` (redirect to /knowledge)
-- [ ] Create `app/(dashboard)/knowledge/page.tsx` (list — Server Component)
-- [ ] Create `app/(dashboard)/knowledge/new/page.tsx`
-- [ ] Create `app/(dashboard)/knowledge/[slug]/page.tsx` (detail)
-- [ ] Create `app/(dashboard)/knowledge/[slug]/edit/page.tsx`
-- [ ] Create `modules/knowledge/components/EntryCard.tsx`
-- [ ] Create `modules/knowledge/components/EntryList.tsx`
-- [ ] Create `modules/knowledge/components/EntryForm.tsx` (client, Tiptap)
-- [ ] Create `modules/editor/components/RichTextEditor.tsx` (Tiptap StarterKit wrapper)
+### Step 4: Knowledge CRUD ✅
+- [x] Zod schemas, Drizzle service, server actions (create/update/delete/publish)
+- [x] Dashboard layout with sidebar + SearchBar
+- [x] List, detail, new, edit pages (all `await params` — Next.js 16)
+- [x] EntryForm: tabbed (Basics/Content/Practices), Tiptap RichTextEditor
+- [x] EntryCard, EntryStatusBadge
 
-### Step 5: AI Extraction Pipeline
-- [ ] Create `modules/ai/schemas/ai.schema.ts` (KnowledgeEntryDraftSchema)
-- [ ] Create `modules/ai/services/ai.service.ts` (OpenRouter streaming via Vercel AI SDK)
-- [ ] Create `app/api/ai/extract/route.ts` (streaming route handler)
-- [ ] Create `modules/ai/store/extraction.store.ts` (Zustand)
-- [ ] Create `modules/ai/components/ExtractionForm.tsx` (client)
-- [ ] Create `modules/ai/components/DraftReviewPanel.tsx` (client)
-- [ ] Create `modules/ai/actions/ai.actions.ts` (saveDraft, acceptDraft)
-- [ ] Create `app/(dashboard)/ai/extract/page.tsx`
+### Step 5: AI Extraction Pipeline ✅
+- [x] `streamObject` via Vercel AI SDK + OpenRouter (`meta-llama/llama-3.3-70b-instruct`)
+- [x] `POST /api/ai/extract` route handler — `toTextStreamResponse()`
+- [x] ExtractionStore (Zustand), ExtractionForm (streaming fetch + live preview)
+- [x] DraftReviewPanel, `saveDraft` + `acceptDraft` server actions
+- [x] AI drafts → `in_review` status only — human must publish
 
-### Step 6: Search
-- [ ] Create `modules/search/services/search.service.ts` (ilike on title + summary)
-- [ ] Create `modules/search/actions/search.actions.ts`
-- [ ] Create `modules/search/components/SearchBar.tsx` (cmdk Command palette)
-- [ ] Wire SearchBar into dashboard layout
+### Step 6: Search ✅
+- [x] `searchEntries` server action (ilike on title + summary)
+- [x] SearchBar: cmdk CommandDialog, ⌘K shortcut, debounced
+- [x] `useDebounce` hook
 
-### Step 7: Skills / Context Pack Export
-- [ ] Create `modules/skills/services/skills.service.ts` (renderSkillMd, renderClaudeMd, renderCopilotInstructions)
-- [ ] Create `modules/skills/actions/skills.actions.ts`
-- [ ] Create `modules/skills/components/ExportPanel.tsx`
-- [ ] Create `app/(dashboard)/skills/page.tsx`
+### Step 7: Skills / Context Pack Export ✅
+- [x] `renderSkillMd`, `renderClaudeMd`, `renderCopilotInstructions`
+- [x] `generateContextPack` server action
+- [x] ExportPanel: tabs, preview, Blob download
+- [x] `/skills` page
 
 ---
 
 ## Phase 2 — AI Enhancement
 
-- [ ] Vercel AI SDK `streamObject` with Zod schema for structured streaming output
 - [ ] Entry relationship UI (graph view, add/remove edges)
 - [ ] AI-suggested related entries (vector similarity via pgvector)
 - [ ] Batch extraction (multiple entries from one long transcript)
