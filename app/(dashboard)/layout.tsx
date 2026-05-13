@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { UserMenu } from '@/modules/auth/components/UserMenu'
-import { Separator } from '@/components/ui/separator'
+import { UserMenu }   from '@/modules/auth/components/UserMenu'
+import { SearchBar }  from '@/modules/search/components/SearchBar'
+import { Separator }  from '@/components/ui/separator'
 
 const navItems = [
   { href: '/knowledge', label: 'Knowledge Base' },
@@ -23,6 +24,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </Link>
         </div>
         <Separator />
+        <div className="px-3 pt-3">
+          <SearchBar />
+        </div>
         <nav className="flex-1 space-y-1 p-3">
           {navItems.map(({ href, label }) => (
             <Link
