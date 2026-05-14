@@ -127,12 +127,12 @@ export function EntryForm({ entry, categories = [] }: Props) {
           {categories.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="categoryId">Category</Label>
-              <Select name="categoryId" defaultValue={entry?.categoryId ?? ''}>
+              <Select name="categoryId" defaultValue={entry?.categoryId ?? 'none'}>
                 <SelectTrigger id="categoryId" className="w-full">
                   <SelectValue placeholder="— None —" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— None —</SelectItem>
+                  <SelectItem value="none">— None —</SelectItem>
                   {categories
                     .filter(c => c.parentId === null)
                     .map(parent => (

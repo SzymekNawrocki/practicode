@@ -16,9 +16,6 @@ export function PublicHeader() {
           >
             Browse
           </Link>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/search">Search</Link>
-          </Button>
           <ThemeToggle />
           <Button asChild size="sm">
             <Link href="/login">Sign in</Link>

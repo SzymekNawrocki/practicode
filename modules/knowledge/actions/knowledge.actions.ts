@@ -38,7 +38,7 @@ export async function createEntry(_prev: KnowledgeEntryFormState, formData: Form
     refactoringGuidance: formData.get('refactoringGuidance') || undefined,
     relatedConcepts:     parseJsonField(formData, 'relatedConcepts'),
     status:              formData.get('status') || 'draft',
-    categoryId:          formData.get('categoryId') || undefined,
+    categoryId:          formData.get('categoryId') === 'none' ? undefined : formData.get('categoryId') || undefined,
   }
 
   const parsed = KnowledgeEntrySchema.safeParse(raw)
@@ -64,7 +64,7 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
     refactoringGuidance: formData.get('refactoringGuidance') || undefined,
     relatedConcepts:     parseJsonField(formData, 'relatedConcepts'),
     status:              formData.get('status') || undefined,
-    categoryId:          formData.get('categoryId') || undefined,
+    categoryId:          formData.get('categoryId') === 'none' ? undefined : formData.get('categoryId') || undefined,
   }
 
   const parsed = KnowledgeEntryUpdateSchema.safeParse(raw)
