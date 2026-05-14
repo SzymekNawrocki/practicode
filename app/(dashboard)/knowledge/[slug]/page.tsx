@@ -7,6 +7,7 @@ import { EntryStatusBadge } from '@/modules/knowledge/components/EntryStatusBadg
 import { knowledgeService }  from '@/modules/knowledge/services/knowledge.service'
 import { deleteEntry, publishEntry } from '@/modules/knowledge/actions/knowledge.actions'
 import { requireAuth } from '@/lib/auth/require-auth'
+import { RelationshipPanel } from '@/modules/knowledge/components/RelationshipPanel'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -138,6 +139,16 @@ export default async function EntryDetailPage({ params }: Props) {
           </div>
         </section>
       )}
+
+      <Separator />
+
+      <RelationshipPanel
+        entryId={entry.id}
+        entrySlug={slug}
+        canEdit={canEdit}
+        outgoing={entry.outgoingRelationships as any}
+        incoming={entry.incomingRelationships as any}
+      />
     </div>
   )
 }

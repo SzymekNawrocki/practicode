@@ -1,8 +1,10 @@
 import 'server-only'
 import { db } from '@/db/client'
-import { knowledgeEntries, entryTags } from '@/db/schema'
+import { knowledgeEntries, entryTags, entryRelationships } from '@/db/schema'
 import { desc, eq, or, ilike, and } from 'drizzle-orm'
 import type { KnowledgeEntryInsert } from '@/db/schema'
+
+type RelationshipType = 'related_to' | 'extends' | 'contradicts' | 'refactors'
 
 export const knowledgeService = {
   async list(opts?: { status?: string; categoryId?: string; limit?: number; offset?: number }) {
@@ -30,7 +32,12 @@ export const knowledgeService = {
   async getBySlug(slug: string) {
     return db.query.knowledgeEntries.findFirst({
       where: eq(knowledgeEntries.slug, slug),
-      with:  { category: true, entryTags: { with: { tag: true } } },
+      with:  {
+        category: true,
+        entryTags: { with: { tag: true } },
+        outgoingRelationships: { with: { target: true } },
+        incomingRelationships: { with: { source: true } },
+      },
     })
   },
 
@@ -50,6 +57,22 @@ export const knowledgeService = {
 
   async delete(slug: string) {
     await db.delete(knowledgeEntries).where(eq(knowledgeEntries.slug, slug))
+  },
+
+  async addRelationship(sourceId: string, targetId: string, type: RelationshipType) {
+    await db.insert(entryRelationships)
+      .values({ sourceId, targetId, relationshipType: type })
+      .onConflictDoNothing()
+  },
+
+  async removeRelationship(sourceId: string, targetId: string, type: RelationshipType) {
+    await db.delete(entryRelationships).where(
+      and(
+        eq(entryRelationships.sourceId, sourceId),
+        eq(entryRelationships.targetId, targetId),
+        eq(entryRelationships.relationshipType, type),
+      )
+    )
   },
 
   async search(query: string) {
