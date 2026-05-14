@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { PublicHeader } from '@/components/public-header'
+import { PublicFooter } from '@/components/public-footer'
 import { categoryService } from '@/modules/knowledge/services/category.service'
 
 export default async function HomePage() {
@@ -18,11 +20,7 @@ export default async function HomePage() {
             Structured engineering knowledge — best practices, anti-patterns, and design patterns for TypeScript, Python, Next.js, FastAPI, and more.
           </p>
           <form action="/search" className="mt-8 flex gap-2 mx-auto max-w-sm">
-            <input
-              name="q"
-              placeholder="Search entries…"
-              className="flex h-9 flex-1 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            />
+            <Input name="q" placeholder="Search entries…" className="flex-1" />
             <Button type="submit" size="sm">Search</Button>
           </form>
         </div>
@@ -68,12 +66,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        Want to contribute?{' '}
-        <Link href="/login" className="font-medium text-foreground hover:underline">
-          Sign in
-        </Link>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }

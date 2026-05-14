@@ -64,11 +64,11 @@ export default async function EntryDetailPage({ params }: Props) {
       {/* Best practices */}
       {entry.bestPractices.length > 0 && (
         <section className="space-y-2">
-          <h2 className="font-semibold text-green-700 dark:text-green-400">Best Practices</h2>
+          <h2 className="font-semibold text-success">Best Practices</h2>
           <ul className="space-y-1">
             {entry.bestPractices.map((p, i) => (
               <li key={i} className="flex gap-2 text-sm">
-                <span className="text-green-600">✓</span>
+                <span className="text-success">✓</span>
                 <span>{p}</span>
               </li>
             ))}
@@ -79,11 +79,11 @@ export default async function EntryDetailPage({ params }: Props) {
       {/* Anti-patterns */}
       {entry.antiPatterns.length > 0 && (
         <section className="space-y-2">
-          <h2 className="font-semibold text-red-700 dark:text-red-400">Anti-Patterns</h2>
+          <h2 className="font-semibold text-destructive">Anti-Patterns</h2>
           <ul className="space-y-1">
             {entry.antiPatterns.map((p, i) => (
               <li key={i} className="flex gap-2 text-sm">
-                <span className="text-red-600">✗</span>
+                <span className="text-destructive">✗</span>
                 <span>{p}</span>
               </li>
             ))}
@@ -108,7 +108,7 @@ export default async function EntryDetailPage({ params }: Props) {
           <h2 className="font-semibold text-sm text-muted-foreground">Tags</h2>
           <div className="flex flex-wrap gap-1">
             {entry.entryTags.map(({ tag }) => (
-              <Badge key={tag.id} variant="outline" style={{ borderColor: tag.color, color: tag.color }}>
+              <Badge key={tag.id} variant="outline" className="tag-colored" style={{ '--tag-color': tag.color } as React.CSSProperties}>
                 {tag.name}
               </Badge>
             ))}

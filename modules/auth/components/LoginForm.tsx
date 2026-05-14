@@ -55,7 +55,7 @@ export function LoginForm() {
           <Input id="signup-password" name="password" type="password" placeholder="••••••••" required minLength={6} />
         </div>
         {signUpState?.error   && <p className="text-sm text-destructive">{signUpState.error}</p>}
-        {signUpState?.success && <p className="text-sm text-green-600">{signUpState.success}</p>}
+        {signUpState?.success && <p className="text-sm text-success">{signUpState.success}</p>}
         <Button type="submit" variant="outline" className="w-full" disabled={signUpPending}>
           {signUpPending ? 'Creating account…' : 'Create account'}
         </Button>

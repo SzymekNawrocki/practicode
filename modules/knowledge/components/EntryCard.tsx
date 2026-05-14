@@ -22,7 +22,7 @@ export function EntryCard({ entry }: { entry: KnowledgeEntryWithRelations }) {
           {entry.entryTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {entry.entryTags.slice(0, 4).map(({ tag }) => (
-                <Badge key={tag.id} variant="outline" className="text-xs" style={{ borderColor: tag.color, color: tag.color }}>
+                <Badge key={tag.id} variant="outline" className="tag-colored text-xs" style={{ '--tag-color': tag.color } as React.CSSProperties}>
                   {tag.name}
                 </Badge>
               ))}

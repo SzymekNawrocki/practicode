@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function PublicHeader() {
   return (
@@ -18,6 +19,7 @@ export function PublicHeader() {
           <Button asChild variant="ghost" size="sm">
             <Link href="/search">Search</Link>
           </Button>
+          <ThemeToggle />
           <Button asChild size="sm">
             <Link href="/login">Sign in</Link>
           </Button>

@@ -1,8 +1,10 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { UserMenu }   from '@/modules/auth/components/UserMenu'
-import { SearchBar }  from '@/modules/search/components/SearchBar'
-import { Separator }  from '@/components/ui/separator'
+import { UserMenu }     from '@/modules/auth/components/UserMenu'
+import { SearchBar }    from '@/modules/search/components/SearchBar'
+import { Separator }    from '@/components/ui/separator'
+import { ThemeToggle }  from '@/components/theme-toggle'
 
 const navItems = [
   { href: '/knowledge', label: 'Knowledge Base' },
@@ -13,6 +15,7 @@ const navItems = [
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   return (
     <div className="flex min-h-screen">
@@ -39,8 +42,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           ))}
         </nav>
         <Separator />
-        <div className="p-3">
-          {user && <UserMenu email={user.email ?? ''} />}
+        <div className="flex items-center justify-between p-3">
+          <UserMenu email={user.email ?? ''} />
+          <ThemeToggle />
         </div>
       </aside>
 

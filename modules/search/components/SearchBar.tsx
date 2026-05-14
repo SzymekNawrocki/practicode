@@ -28,8 +28,12 @@ export function SearchBar() {
   useEffect(() => {
     if (debouncedQuery.length < 2) { setResults([]); return }
     startTransition(async () => {
-      const entries = await searchEntries(debouncedQuery)
-      setResults(entries)
+      try {
+        const entries = await searchEntries(debouncedQuery)
+        setResults(entries)
+      } catch {
+        setResults([])
+      }
     })
   }, [debouncedQuery])
 

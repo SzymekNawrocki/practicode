@@ -6,6 +6,16 @@ import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
 
 type Props = { params: Promise<{ categorySlug: string }> }
 
+export async function generateMetadata({ params }: Props) {
+  const { categorySlug } = await params
+  const category = await categoryService.getBySlug(categorySlug)
+  if (!category) return {}
+  return {
+    title: `${category.name} — PractiCode`,
+    description: category.description ?? `Browse ${category.name} engineering knowledge.`,
+  }
+}
+
 export default async function CategoryPage({ params }: Props) {
   const { categorySlug } = await params
   const category = await categoryService.getBySlug(categorySlug)

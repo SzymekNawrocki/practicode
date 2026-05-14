@@ -50,10 +50,10 @@ export function DraftReviewPanel({ draft, rawText, onReset }: Props) {
 
       {draft.bestPractices.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-sm font-medium text-green-700 dark:text-green-400">Best Practices</h3>
+          <h3 className="text-sm font-medium text-success">Best Practices</h3>
           <ul className="space-y-1">
             {draft.bestPractices.map((p, i) => (
-              <li key={i} className="flex gap-2 text-sm"><span className="text-green-600">✓</span>{p}</li>
+              <li key={`bp-${i}-${p}`} className="flex gap-2 text-sm"><span className="text-success">✓</span>{p}</li>
             ))}
           </ul>
         </section>
@@ -61,10 +61,10 @@ export function DraftReviewPanel({ draft, rawText, onReset }: Props) {
 
       {draft.antiPatterns.length > 0 && (
         <section className="space-y-2">
-          <h3 className="text-sm font-medium text-red-700 dark:text-red-400">Anti-Patterns</h3>
+          <h3 className="text-sm font-medium text-destructive">Anti-Patterns</h3>
           <ul className="space-y-1">
             {draft.antiPatterns.map((p, i) => (
-              <li key={i} className="flex gap-2 text-sm"><span className="text-red-600">✗</span>{p}</li>
+              <li key={`ap-${i}-${p}`} className="flex gap-2 text-sm"><span className="text-destructive">✗</span>{p}</li>
             ))}
           </ul>
         </section>

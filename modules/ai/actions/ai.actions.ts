@@ -8,6 +8,7 @@ import { aiDrafts, knowledgeEntries } from '@/db/schema'
 import { KnowledgeEntryDraftSchema } from '../schemas/ai.schema'
 import type { KnowledgeEntryDraft } from '../schemas/ai.schema'
 import { eq } from 'drizzle-orm'
+import { toSlug } from '@/lib/utils/slug'
 
 async function getAuthUser() {
   const supabase = await createSupabaseServerClient()
@@ -39,12 +40,7 @@ export async function acceptDraft(draftId: string) {
   if (!draft) throw new Error('Draft not found')
 
   const data = draft.structuredOutput as KnowledgeEntryDraft
-  const slug = data.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 80)
-    + '-' + Date.now().toString(36)
+  const slug = toSlug(data.title).slice(0, 80) + '-' + Date.now().toString(36)
 
   const [entry] = await db.insert(knowledgeEntries).values({
     slug,

@@ -14,6 +14,15 @@ async function getAuthUser() {
   return user
 }
 
+function parseJsonField(formData: FormData, name: string): unknown[] {
+  try {
+    const value = formData.get(name) as string | null
+    return JSON.parse(value || '[]')
+  } catch {
+    return []
+  }
+}
+
 export async function createEntry(_prev: KnowledgeEntryFormState, formData: FormData): Promise<KnowledgeEntryFormState> {
   const user = await getAuthUser()
 
@@ -23,11 +32,11 @@ export async function createEntry(_prev: KnowledgeEntryFormState, formData: Form
     summary:             formData.get('summary'),
     problem:             formData.get('problem') || undefined,
     explanation:         formData.get('explanation') || undefined,
-    bestPractices:       JSON.parse(formData.get('bestPractices') as string || '[]'),
-    antiPatterns:        JSON.parse(formData.get('antiPatterns') as string || '[]'),
-    examples:            JSON.parse(formData.get('examples') as string || '[]'),
+    bestPractices:       parseJsonField(formData, 'bestPractices'),
+    antiPatterns:        parseJsonField(formData, 'antiPatterns'),
+    examples:            parseJsonField(formData, 'examples'),
     refactoringGuidance: formData.get('refactoringGuidance') || undefined,
-    relatedConcepts:     JSON.parse(formData.get('relatedConcepts') as string || '[]'),
+    relatedConcepts:     parseJsonField(formData, 'relatedConcepts'),
     status:              formData.get('status') || 'draft',
     categoryId:          formData.get('categoryId') || undefined,
   }
@@ -49,11 +58,11 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
     summary:             formData.get('summary') || undefined,
     problem:             formData.get('problem') || undefined,
     explanation:         formData.get('explanation') || undefined,
-    bestPractices:       JSON.parse(formData.get('bestPractices') as string || '[]'),
-    antiPatterns:        JSON.parse(formData.get('antiPatterns') as string || '[]'),
-    examples:            JSON.parse(formData.get('examples') as string || '[]'),
+    bestPractices:       parseJsonField(formData, 'bestPractices'),
+    antiPatterns:        parseJsonField(formData, 'antiPatterns'),
+    examples:            parseJsonField(formData, 'examples'),
     refactoringGuidance: formData.get('refactoringGuidance') || undefined,
-    relatedConcepts:     JSON.parse(formData.get('relatedConcepts') as string || '[]'),
+    relatedConcepts:     parseJsonField(formData, 'relatedConcepts'),
     status:              formData.get('status') || undefined,
     categoryId:          formData.get('categoryId') || undefined,
   }

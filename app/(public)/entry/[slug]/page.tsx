@@ -6,6 +6,17 @@ import { categoryService } from '@/modules/knowledge/services/category.service'
 
 type Props = { params: Promise<{ slug: string }> }
 
+export async function generateMetadata({ params }: Props) {
+  const { slug } = await params
+  const entry = await knowledgeService.getBySlug(slug)
+  if (!entry) return {}
+  return {
+    title: `${entry.title} — PractiCode`,
+    description: entry.summary,
+    openGraph: { title: entry.title, description: entry.summary },
+  }
+}
+
 export default async function PublicEntryPage({ params }: Props) {
   const { slug } = await params
   const entry = await knowledgeService.getBySlug(slug)
@@ -78,11 +89,11 @@ export default async function PublicEntryPage({ params }: Props) {
       {/* Best practices */}
       {entry.bestPractices.length > 0 && (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">Best Practices</h2>
+          <h2 className="text-lg font-semibold text-success">Best Practices</h2>
           <ul className="mt-3 space-y-2">
             {entry.bestPractices.map((item, i) => (
               <li key={i} className="flex gap-2 text-sm">
-                <span className="mt-0.5 text-emerald-500">✓</span>
+                <span className="mt-0.5 text-success">✓</span>
                 <span>{item}</span>
               </li>
             ))}
@@ -93,11 +104,11 @@ export default async function PublicEntryPage({ params }: Props) {
       {/* Anti-patterns */}
       {entry.antiPatterns.length > 0 && (
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-red-700 dark:text-red-400">Anti-Patterns</h2>
+          <h2 className="text-lg font-semibold text-destructive">Anti-Patterns</h2>
           <ul className="mt-3 space-y-2">
             {entry.antiPatterns.map((item, i) => (
               <li key={i} className="flex gap-2 text-sm">
-                <span className="mt-0.5 text-red-500">✗</span>
+                <span className="mt-0.5 text-destructive">✗</span>
                 <span>{item}</span>
               </li>
             ))}
@@ -136,8 +147,8 @@ export default async function PublicEntryPage({ params }: Props) {
               <Badge
                 key={tag.id}
                 variant="outline"
-                className="text-xs"
-                style={{ borderColor: tag.color, color: tag.color }}
+                className="tag-colored text-xs"
+                style={{ '--tag-color': tag.color } as React.CSSProperties}
               >
                 {tag.name}
               </Badge>

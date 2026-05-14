@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
 
@@ -24,19 +26,8 @@ export default async function SearchPage({ searchParams }: Props) {
 
       {/* Search form */}
       <form action="/search" className="mt-4 flex gap-2 max-w-sm">
-        <input
-          name="q"
-          defaultValue={query}
-          placeholder="Search entries…"
-          autoFocus
-          className="flex h-9 flex-1 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        />
-        <button
-          type="submit"
-          className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          Search
-        </button>
+        <Input name="q" defaultValue={query} placeholder="Search entries…" autoFocus className="flex-1" />
+        <Button type="submit">Search</Button>
       </form>
 
       {/* Results */}
@@ -48,7 +39,7 @@ export default async function SearchPage({ searchParams }: Props) {
           <p className="text-muted-foreground">Please enter at least 2 characters.</p>
         )}
         {query.length >= 2 && results.length === 0 && (
-          <p className="text-muted-foreground">No entries found for "{query}".</p>
+          <p className="text-muted-foreground">No entries found for &ldquo;{query}&rdquo;.</p>
         )}
         {results.length > 0 && (
           <>

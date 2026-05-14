@@ -6,6 +6,19 @@ import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
 
 type Props = { params: Promise<{ categorySlug: string; subSlug: string }> }
 
+export async function generateMetadata({ params }: Props) {
+  const { categorySlug, subSlug } = await params
+  const [parent, sub] = await Promise.all([
+    categoryService.getBySlug(categorySlug),
+    categoryService.getBySlug(`${categorySlug}-${subSlug}`),
+  ])
+  if (!sub) return {}
+  return {
+    title: `${sub.name}${parent ? ` · ${parent.name}` : ''} — PractiCode`,
+    description: sub.description ?? `Browse ${sub.name} entries.`,
+  }
+}
+
 export default async function SubcategoryPage({ params }: Props) {
   const { categorySlug, subSlug } = await params
   const fullSlug = `${categorySlug}-${subSlug}`

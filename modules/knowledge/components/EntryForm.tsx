@@ -6,19 +6,17 @@ import { Input }    from '@/components/ui/input'
 import { Label }    from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RichTextEditor } from '@/modules/editor/components/RichTextEditor'
 import { createEntry, updateEntry } from '../actions/knowledge.actions'
 import type { KnowledgeEntryWithRelations } from '../types/knowledge.types'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
 import type { Category } from '@/db/schema'
+import { toSlug } from '@/lib/utils/slug'
 
 type Props = {
   entry?:      KnowledgeEntryWithRelations
   categories?: Category[]
-}
-
-function toSlug(title: string) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
 
 export function EntryForm({ entry, categories = [] }: Props) {
@@ -114,40 +112,43 @@ export function EntryForm({ entry, categories = [] }: Props) {
 
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
-            <select
-              id="status" name="status"
-              defaultValue={entry?.status ?? 'draft'}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-            >
-              <option value="draft">Draft</option>
-              <option value="in_review">In Review</option>
-              <option value="published">Published</option>
-            </select>
+            <Select name="status" defaultValue={entry?.status ?? 'draft'}>
+              <SelectTrigger id="status" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="in_review">In Review</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {categories.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="categoryId">Category</Label>
-              <select
-                id="categoryId" name="categoryId"
-                defaultValue={entry?.categoryId ?? ''}
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-              >
-                <option value="">— None —</option>
-                {categories
-                  .filter(c => c.parentId === null)
-                  .map(parent => (
-                    <optgroup key={parent.id} label={parent.name}>
-                      {categories
-                        .filter(c => c.parentId === parent.id)
-                        .map(child => (
-                          <option key={child.id} value={child.id}>
-                            {child.name}
-                          </option>
-                        ))}
-                    </optgroup>
-                  ))}
-              </select>
+              <Select name="categoryId" defaultValue={entry?.categoryId ?? ''}>
+                <SelectTrigger id="categoryId" className="w-full">
+                  <SelectValue placeholder="— None —" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">— None —</SelectItem>
+                  {categories
+                    .filter(c => c.parentId === null)
+                    .map(parent => (
+                      <SelectGroup key={parent.id}>
+                        <SelectLabel>{parent.name}</SelectLabel>
+                        {categories
+                          .filter(c => c.parentId === parent.id)
+                          .map(child => (
+                            <SelectItem key={child.id} value={child.id}>
+                              {child.name}
+                            </SelectItem>
+                          ))}
+                      </SelectGroup>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </TabsContent>
@@ -242,9 +243,9 @@ function StringListField({
       {items.length > 0 && (
         <ul className="space-y-1">
           {items.map((item, i) => (
-            <li key={i} className="flex items-center justify-between rounded-md bg-muted px-3 py-1.5 text-sm">
+            <li key={`${label}-${i}-${item}`} className="flex items-center justify-between rounded-md bg-muted px-3 py-1.5 text-sm">
               <span>{item}</span>
-              <button type="button" onClick={() => onRemove(i)} className="text-muted-foreground hover:text-destructive ml-2">×</button>
+              <button type="button" onClick={() => onRemove(i)} aria-label="Remove item" className="text-muted-foreground hover:text-destructive ml-2">×</button>
             </li>
           ))}
         </ul>
