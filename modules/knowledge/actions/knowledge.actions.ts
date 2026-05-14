@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect }       from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { KnowledgeEntrySchema, KnowledgeEntryUpdateSchema } from '../schemas/knowledge.schema'
+import { KnowledgeEntryUpdateSchema, QuickCreateSchema } from '../schemas/knowledge.schema'
 import { knowledgeService } from '../services/knowledge.service'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
 
@@ -12,6 +12,11 @@ async function getAuthUser() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
   return user
+}
+
+function extractSummary(html: string | undefined, title: string): string {
+  const text = (html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  return text.slice(0, 200) || title.slice(0, 200)
 }
 
 function parseJsonField(formData: FormData, name: string): unknown[] {
@@ -27,24 +32,21 @@ export async function createEntry(_prev: KnowledgeEntryFormState, formData: Form
   const user = await getAuthUser()
 
   const raw = {
-    title:               formData.get('title'),
-    slug:                formData.get('slug'),
-    summary:             formData.get('summary'),
-    problem:             formData.get('problem') || undefined,
-    explanation:         formData.get('explanation') || undefined,
-    bestPractices:       parseJsonField(formData, 'bestPractices'),
-    antiPatterns:        parseJsonField(formData, 'antiPatterns'),
-    examples:            parseJsonField(formData, 'examples'),
-    refactoringGuidance: formData.get('refactoringGuidance') || undefined,
-    relatedConcepts:     parseJsonField(formData, 'relatedConcepts'),
-    status:              formData.get('status') || 'draft',
-    categoryId:          formData.get('categoryId') === 'none' ? undefined : formData.get('categoryId') || undefined,
+    title:       formData.get('title'),
+    slug:        formData.get('slug'),
+    explanation: formData.get('explanation') || undefined,
+    categoryId:  formData.get('categoryId') === 'none' ? undefined : formData.get('categoryId') || undefined,
   }
 
-  const parsed = KnowledgeEntrySchema.safeParse(raw)
+  const parsed = QuickCreateSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors as Record<string, string[]> }
 
-  const entry = await knowledgeService.create({ ...parsed.data, createdBy: user.id })
+  const entry = await knowledgeService.create({
+    ...parsed.data,
+    summary:   extractSummary(parsed.data.explanation, parsed.data.title),
+    status:    'draft',
+    createdBy: user.id,
+  })
   revalidatePath('/knowledge')
   redirect(`/knowledge/${entry.slug}`)
 }

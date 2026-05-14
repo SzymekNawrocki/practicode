@@ -29,5 +29,12 @@ export const KnowledgeEntrySchema = z.object({
 
 export const KnowledgeEntryUpdateSchema = KnowledgeEntrySchema.partial().required({ slug: true })
 
+export const QuickCreateSchema = z.object({
+  title:       z.string().min(3).max(200),
+  slug:        SlugSchema,
+  explanation: z.string().optional(),
+  categoryId:  z.string().uuid().optional(),
+})
+
 export type KnowledgeEntryFormData  = z.infer<typeof KnowledgeEntrySchema>
 export type KnowledgeEntryFormState = { error?: string | Record<string, string[]>; success?: boolean } | undefined

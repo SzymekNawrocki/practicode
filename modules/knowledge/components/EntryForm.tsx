@@ -46,6 +46,73 @@ export function EntryForm({ entry, categories = [] }: Props) {
     setList(list.filter((_, i) => i !== idx))
   }
 
+  if (!isEdit) {
+    return (
+      <form action={formAction} className="space-y-6">
+        <input type="hidden" name="slug"        value={slug} />
+        <input type="hidden" name="explanation" value={explanation} />
+
+        <div className="space-y-2">
+          <Label htmlFor="title">Title</Label>
+          <Input
+            id="title" name="title"
+            value={title}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            placeholder="Single Responsibility Principle"
+            required
+          />
+        </div>
+
+        {categories.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="categoryId">Category</Label>
+            <Select name="categoryId">
+              <SelectTrigger id="categoryId" className="w-full">
+                <SelectValue placeholder="— None —" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— None —</SelectItem>
+                {categories
+                  .filter(c => c.parentId === null)
+                  .map(parent => (
+                    <SelectGroup key={parent.id}>
+                      <SelectLabel>{parent.name}</SelectLabel>
+                      {categories
+                        .filter(c => c.parentId === parent.id)
+                        .map(child => (
+                          <SelectItem key={child.id} value={child.id}>
+                            {child.name}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label>Content</Label>
+          <RichTextEditor
+            content={explanation}
+            onChange={setExplanation}
+            placeholder="Write your entry…"
+          />
+        </div>
+
+        {state?.error && typeof state.error === 'string' && (
+          <p className="text-sm text-destructive">{state.error}</p>
+        )}
+
+        <div className="flex justify-end">
+          <Button type="submit" disabled={pending}>
+            {pending ? 'Saving…' : 'Create entry'}
+          </Button>
+        </div>
+      </form>
+    )
+  }
+
   return (
     <form action={formAction} className="space-y-6">
       {/* Hidden fields for rich content */}
@@ -54,7 +121,7 @@ export function EntryForm({ entry, categories = [] }: Props) {
       <input type="hidden" name="bestPractices"       value={JSON.stringify(bestPractices)} />
       <input type="hidden" name="antiPatterns"        value={JSON.stringify(antiPatterns)} />
       <input type="hidden" name="relatedConcepts"     value={JSON.stringify(relatedConcepts)} />
-      {isEdit && <input type="hidden" name="slug" value={entry.slug} />}
+      <input type="hidden" name="slug" value={entry.slug} />
 
       <Tabs defaultValue="basics">
         <TabsList>
@@ -75,19 +142,6 @@ export function EntryForm({ entry, categories = [] }: Props) {
               required
             />
           </div>
-
-          {!isEdit && (
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug" name="slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="single-responsibility-principle"
-                required
-              />
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="summary">Summary</Label>
@@ -206,7 +260,7 @@ export function EntryForm({ entry, categories = [] }: Props) {
 
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? 'Saving…' : isEdit ? 'Update entry' : 'Create entry'}
+          {pending ? 'Saving…' : 'Update entry'}
         </Button>
       </div>
     </form>
