@@ -27,16 +27,42 @@ AI-assisted software engineering knowledge platform. A structured knowledge base
 ```
 modules/
   knowledge/    ← core CRUD (entries, tags, categories)
+    services/
+      knowledge.service.ts   ← list(opts?), listPublishedByCategory(), getBySlug(), create(), update(), delete(), search()
+      category.service.ts    ← listAll(), listWithChildren(), getBySlug()
+    components/
+      EntryCard.tsx          ← dashboard card → /knowledge/[slug]
+      PublicEntryCard.tsx    ← public card → /entry/[slug]
+      EntryForm.tsx          ← create/edit form (accepts categories[] prop for grouped select)
   ai/           ← extraction pipeline (OpenRouter → structured draft → human review)
   editor/       ← Tiptap wrapper components
   auth/         ← Supabase auth actions + client helpers
   search/       ← full-text search
   skills/       ← context pack export (skill.md, claude.md, copilot instructions)
 
+app/
+  page.tsx              ← public homepage (hero + category grid + search)
+  (public)/             ← no auth required
+    layout.tsx          ← PublicHeader (sticky, logo + nav + sign in)
+    browse/[categorySlug]/page.tsx
+    browse/[categorySlug]/[subSlug]/page.tsx
+    entry/[slug]/page.tsx
+    search/page.tsx
+  (dashboard)/          ← auth required
+    knowledge/          ← list, new, [slug], [slug]/edit
+    ai/extract/
+    skills/
+  (auth)/login/
+
+components/
+  public-header.tsx     ← shared header used by (public) layout and homepage
+  ui/                   ← shadcn components
+
 db/
   schema/       ← Drizzle table definitions (users, knowledge_entries, tags, categories,
                    entry_tags, entry_relationships, ai_drafts)
   migrations/   ← drizzle-kit generated SQL (committed)
+  seed.ts       ← inserts 56 category rows (7 parents × 7 children) — run once
   client.ts     ← singleton drizzle + postgres.js (HMR-safe via globalThis)
 
 lib/
@@ -84,8 +110,18 @@ lib/
 - `lib/env.ts` validates all env vars at module load time
 
 ### Routing
-- Route groups: `(auth)` for login, `(dashboard)` for protected app
+- Route groups: `(auth)` for login, `(dashboard)` for protected app, `(public)` for unauthenticated pages
 - `app/(dashboard)/layout.tsx` contains `QueryClientProvider` (Client Component wrapper around Server Component children)
+- `app/(public)/layout.tsx` — shared public header (logo, Browse, Search, Sign in)
+- `app/page.tsx` — public homepage (outside route groups, no sidebar)
+- Public routes whitelisted in `proxy.ts`: `/`, `/browse/**`, `/entry/**`, `/search`
+- Dashboard routes (`/knowledge/**`, `/ai/**`, `/skills/**`) remain auth-protected
+
+### Public site
+- Anyone can read published entries — no auth required
+- Auth required only to create/edit (contributor model)
+- Public routes: `/browse/[categorySlug]`, `/browse/[categorySlug]/[subSlug]`, `/entry/[slug]`, `/search`
+- `PublicEntryCard` links to `/entry/[slug]`; dashboard `EntryCard` links to `/knowledge/[slug]`
 
 ---
 
@@ -94,7 +130,7 @@ lib/
 | Table | Purpose |
 |---|---|
 | `users` | Mirrors `auth.users.id` from Supabase — role: admin/editor/viewer |
-| `categories` | Hierarchical (self-ref `parent_id`), flat for Phase 1 |
+| `categories` | 2-level hierarchy (self-ref `parent_id`). **56 rows seeded**: 7 tech parents (typescript, python, nextjs, fastapi, system-architecture, devops, git) × 7 topic children (best-practices, anti-patterns, design-patterns, security, performance, testing, core-concepts). Child slugs use `{parent}-{child}` pattern (e.g. `typescript-best-practices`). Drizzle relations require `relationName: 'parent_child'` on both sides of the self-join. |
 | `tags` | id, name, slug, color |
 | `knowledge_entries` | Core entity — slug, title, summary, problem, explanation, best_practices[], anti_patterns[], examples[], refactoring_guidance, status |
 | `entry_tags` | Junction: entries ↔ tags |
@@ -116,7 +152,8 @@ Add more with: `npx shadcn add <component>`
 ```bash
 npm run dev           # start dev server (Turbopack default in Next.js 16)
 npm run build         # production build
-npx drizzle-kit generate   # generate SQL migrations from schema
-npx drizzle-kit migrate    # run migrations (use DATABASE_DIRECT_URL)
-npx drizzle-kit studio     # visual DB explorer
+npm run db:seed       # seed 56 categories (idempotent — safe to re-run)
+npm run db:generate   # generate SQL migrations from schema changes
+npm run db:migrate    # run migrations (use DATABASE_DIRECT_URL)
+npm run db:studio     # visual DB explorer
 ```
