@@ -55,7 +55,7 @@ export default async function EntryDetailPage({ params }: Props) {
         <section className="space-y-2">
           <h2 className="font-semibold">Explanation</h2>
           <div
-            className="prose prose-sm dark:prose-invert max-w-none"
+            className="prose-content"
             dangerouslySetInnerHTML={{ __html: entry.explanation }}
           />
         </section>
@@ -96,7 +96,7 @@ export default async function EntryDetailPage({ params }: Props) {
         <section className="space-y-2">
           <h2 className="font-semibold">Refactoring Guidance</h2>
           <div
-            className="prose prose-sm dark:prose-invert max-w-none"
+            className="prose-content"
             dangerouslySetInnerHTML={{ __html: entry.refactoringGuidance }}
           />
         </section>

@@ -84,7 +84,7 @@ export default async function PublicEntryPage({ params }: Props) {
         <section className="mt-10">
           <h2 className="text-lg font-semibold">Explanation</h2>
           <div
-            className="prose prose-sm dark:prose-invert mt-3 max-w-none"
+            className="prose-content mt-3"
             dangerouslySetInnerHTML={{ __html: entry.explanation }}
           />
         </section>
@@ -125,7 +125,7 @@ export default async function PublicEntryPage({ params }: Props) {
         <section className="mt-10">
           <h2 className="text-lg font-semibold">Refactoring Guidance</h2>
           <div
-            className="prose prose-sm dark:prose-invert mt-3 max-w-none"
+            className="prose-content mt-3"
             dangerouslySetInnerHTML={{ __html: entry.refactoringGuidance }}
           />
         </section>
