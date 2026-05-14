@@ -5,12 +5,24 @@ import { desc, eq, or, ilike, and } from 'drizzle-orm'
 import type { KnowledgeEntryInsert } from '@/db/schema'
 
 export const knowledgeService = {
-  async list(opts?: { status?: string; limit?: number; offset?: number }) {
+  async list(opts?: { status?: string; categoryId?: string; limit?: number; offset?: number }) {
     return db.query.knowledgeEntries.findMany({
-      where:   opts?.status ? eq(knowledgeEntries.status, opts.status as 'draft' | 'in_review' | 'published') : undefined,
+      where: and(
+        opts?.status     ? eq(knowledgeEntries.status,     opts.status as 'draft' | 'in_review' | 'published') : undefined,
+        opts?.categoryId ? eq(knowledgeEntries.categoryId, opts.categoryId) : undefined,
+      ),
       orderBy: [desc(knowledgeEntries.updatedAt)],
       limit:   opts?.limit  ?? 20,
       offset:  opts?.offset ?? 0,
+      with:    { category: true, entryTags: { with: { tag: true } } },
+    })
+  },
+
+  async listPublishedByCategory(categoryId: string, limit = 12) {
+    return db.query.knowledgeEntries.findMany({
+      where:   and(eq(knowledgeEntries.status, 'published'), eq(knowledgeEntries.categoryId, categoryId)),
+      orderBy: [desc(knowledgeEntries.updatedAt)],
+      limit,
       with:    { category: true, entryTags: { with: { tag: true } } },
     })
   },

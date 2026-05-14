@@ -23,8 +23,13 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
   const isLoginPage = pathname === '/login'
+  const isPublicPath =
+    pathname === '/' ||
+    pathname.startsWith('/browse') ||
+    pathname.startsWith('/entry') ||
+    pathname.startsWith('/search')
 
-  if (!user && !isLoginPage) {
+  if (!user && !isLoginPage && !isPublicPath) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

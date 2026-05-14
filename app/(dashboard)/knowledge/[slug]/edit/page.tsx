@@ -1,12 +1,16 @@
 import { notFound } from 'next/navigation'
 import { EntryForm } from '@/modules/knowledge/components/EntryForm'
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
+import { categoryService } from '@/modules/knowledge/services/category.service'
 
 type Props = { params: Promise<{ slug: string }> }
 
 export default async function EditEntryPage({ params }: Props) {
   const { slug } = await params
-  const entry = await knowledgeService.getBySlug(slug)
+  const [entry, categories] = await Promise.all([
+    knowledgeService.getBySlug(slug),
+    categoryService.listAll(),
+  ])
   if (!entry) notFound()
 
   return (
@@ -15,7 +19,7 @@ export default async function EditEntryPage({ params }: Props) {
         <h1 className="text-2xl font-semibold">Edit entry</h1>
         <p className="text-sm text-muted-foreground mt-1">{entry.title}</p>
       </div>
-      <EntryForm entry={entry} />
+      <EntryForm entry={entry} categories={categories} />
     </div>
   )
 }

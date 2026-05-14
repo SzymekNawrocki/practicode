@@ -10,16 +10,18 @@ import { RichTextEditor } from '@/modules/editor/components/RichTextEditor'
 import { createEntry, updateEntry } from '../actions/knowledge.actions'
 import type { KnowledgeEntryWithRelations } from '../types/knowledge.types'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
+import type { Category } from '@/db/schema'
 
 type Props = {
-  entry?: KnowledgeEntryWithRelations
+  entry?:      KnowledgeEntryWithRelations
+  categories?: Category[]
 }
 
 function toSlug(title: string) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
 
-export function EntryForm({ entry }: Props) {
+export function EntryForm({ entry, categories = [] }: Props) {
   const isEdit = !!entry
 
   const [explanation,         setExplanation]         = useState(entry?.explanation         ?? '')
@@ -122,6 +124,32 @@ export function EntryForm({ entry }: Props) {
               <option value="published">Published</option>
             </select>
           </div>
+
+          {categories.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="categoryId">Category</Label>
+              <select
+                id="categoryId" name="categoryId"
+                defaultValue={entry?.categoryId ?? ''}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+              >
+                <option value="">— None —</option>
+                {categories
+                  .filter(c => c.parentId === null)
+                  .map(parent => (
+                    <optgroup key={parent.id} label={parent.name}>
+                      {categories
+                        .filter(c => c.parentId === parent.id)
+                        .map(child => (
+                          <option key={child.id} value={child.id}>
+                            {child.name}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
+              </select>
+            </div>
+          )}
         </TabsContent>
 
         {/* CONTENT */}

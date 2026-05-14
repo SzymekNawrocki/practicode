@@ -1,0 +1,157 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { Badge } from '@/components/ui/badge'
+import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
+import { categoryService } from '@/modules/knowledge/services/category.service'
+
+type Props = { params: Promise<{ slug: string }> }
+
+export default async function PublicEntryPage({ params }: Props) {
+  const { slug } = await params
+  const entry = await knowledgeService.getBySlug(slug)
+
+  if (!entry || entry.status !== 'published') notFound()
+
+  const catWithParent = entry.category
+    ? await categoryService.getBySlug(entry.category.slug)
+    : null
+
+  const parentCat  = catWithParent?.parent ?? null
+  const subCatSlug = catWithParent && parentCat
+    ? catWithParent.slug.replace(`${parentCat.slug}-`, '')
+    : null
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-12">
+      {/* Breadcrumb */}
+      <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+        <Link href="/" className="hover:text-foreground">Home</Link>
+        {parentCat && (
+          <>
+            <span>/</span>
+            <Link href={`/browse/${parentCat.slug}`} className="hover:text-foreground">{parentCat.name}</Link>
+          </>
+        )}
+        {catWithParent && parentCat && subCatSlug && (
+          <>
+            <span>/</span>
+            <Link href={`/browse/${parentCat.slug}/${subCatSlug}`} className="hover:text-foreground">
+              {catWithParent.name}
+            </Link>
+          </>
+        )}
+        <span>/</span>
+        <span className="text-foreground line-clamp-1">{entry.title}</span>
+      </nav>
+
+      {/* Title */}
+      <h1 className="text-3xl font-bold tracking-tight">{entry.title}</h1>
+
+      {entry.category && (
+        <div className="mt-3">
+          <Badge variant="secondary">{entry.category.name}</Badge>
+        </div>
+      )}
+
+      {/* Summary */}
+      <p className="mt-4 text-lg text-muted-foreground">{entry.summary}</p>
+
+      {/* Problem */}
+      {entry.problem && (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold">Problem</h2>
+          <p className="mt-2 text-muted-foreground">{entry.problem}</p>
+        </section>
+      )}
+
+      {/* Explanation */}
+      {entry.explanation && (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold">Explanation</h2>
+          <div
+            className="prose prose-sm dark:prose-invert mt-3 max-w-none"
+            dangerouslySetInnerHTML={{ __html: entry.explanation }}
+          />
+        </section>
+      )}
+
+      {/* Best practices */}
+      {entry.bestPractices.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">Best Practices</h2>
+          <ul className="mt-3 space-y-2">
+            {entry.bestPractices.map((item, i) => (
+              <li key={i} className="flex gap-2 text-sm">
+                <span className="mt-0.5 text-emerald-500">✓</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Anti-patterns */}
+      {entry.antiPatterns.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold text-red-700 dark:text-red-400">Anti-Patterns</h2>
+          <ul className="mt-3 space-y-2">
+            {entry.antiPatterns.map((item, i) => (
+              <li key={i} className="flex gap-2 text-sm">
+                <span className="mt-0.5 text-red-500">✗</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Refactoring guidance */}
+      {entry.refactoringGuidance && (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold">Refactoring Guidance</h2>
+          <div
+            className="prose prose-sm dark:prose-invert mt-3 max-w-none"
+            dangerouslySetInnerHTML={{ __html: entry.refactoringGuidance }}
+          />
+        </section>
+      )}
+
+      {/* Related concepts */}
+      {entry.relatedConcepts.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold">Related Concepts</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {entry.relatedConcepts.map((c, i) => (
+              <Badge key={i} variant="outline">{c}</Badge>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Tags */}
+      {entry.entryTags.length > 0 && (
+        <section className="mt-10">
+          <div className="flex flex-wrap gap-1.5">
+            {entry.entryTags.map(({ tag }) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className="text-xs"
+                style={{ borderColor: tag.color, color: tag.color }}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Edit link — dashboard will enforce auth */}
+      <div className="mt-12 border-t pt-6">
+        <Link href={`/knowledge/${entry.slug}/edit`} className="text-sm text-muted-foreground hover:text-foreground">
+          Edit this entry →
+        </Link>
+      </div>
+    </div>
+  )
+}

@@ -15,6 +15,9 @@ export function EntryCard({ entry }: { entry: KnowledgeEntryWithRelations }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
+          {entry.category && (
+            <p className="text-xs text-muted-foreground">{entry.category.name}</p>
+          )}
           <p className="text-sm text-muted-foreground line-clamp-2">{entry.summary}</p>
           {entry.entryTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
