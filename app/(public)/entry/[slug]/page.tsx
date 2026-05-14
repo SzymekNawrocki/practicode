@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { categoryService } from '@/modules/knowledge/services/category.service'
+import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -23,9 +24,12 @@ export default async function PublicEntryPage({ params }: Props) {
 
   if (!entry || entry.status !== 'published') notFound()
 
-  const catWithParent = entry.category
-    ? await categoryService.getBySlug(entry.category.slug)
-    : null
+  const [catWithParent, moreRaw] = await Promise.all([
+    entry.category ? categoryService.getBySlug(entry.category.slug) : null,
+    entry.categoryId ? knowledgeService.listPublishedByCategory(entry.categoryId, 4) : Promise.resolve([]),
+  ])
+
+  const moreEntries = moreRaw.filter(e => e.id !== entry.id).slice(0, 3)
 
   const parentCat  = catWithParent?.parent ?? null
   const subCatSlug = catWithParent && parentCat
@@ -152,6 +156,20 @@ export default async function PublicEntryPage({ params }: Props) {
               >
                 {tag.name}
               </Badge>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* More in this category */}
+      {moreEntries.length > 0 && (
+        <section className="mt-16 border-t pt-8">
+          <h2 className="mb-4 text-base font-semibold">
+            More in {entry.category?.name}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {moreEntries.map(e => (
+              <PublicEntryCard key={e.id} entry={e} />
             ))}
           </div>
         </section>

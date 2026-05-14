@@ -33,7 +33,7 @@ export default async function HomePage() {
         <h2 className="mb-8 text-xl font-semibold">Browse by Technology</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categories.map(cat => (
-            <Card key={cat.id} className="hover:ring-primary/40 transition-all">
+            <Card key={cat.id} className="transition-all hover:border-primary/50 hover:shadow-sm">
               <CardHeader>
                 <CardTitle>
                   <Link href={`/browse/${cat.slug}`} className="hover:text-primary transition-colors">
