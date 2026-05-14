@@ -135,9 +135,7 @@
   }
 }
 
-@layer utilities {
-  .tag-colored {
-    border-color: var(--tag-color);
-    color: var(--tag-color);
-  }
+@utility tag-colored {
+  border-color: var(--tag-color);
+  color: var(--tag-color);
 }
