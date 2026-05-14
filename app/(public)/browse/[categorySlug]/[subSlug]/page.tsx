@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { cn } from '@/lib/utils'
 import { categoryService } from '@/modules/knowledge/services/category.service'
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
@@ -59,11 +60,12 @@ export default async function SubcategoryPage({ params }: Props) {
               <Link
                 key={child.id}
                 href={`/browse/${categorySlug}/${cs}`}
-                className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+                className={cn(
+                  'border px-3 py-1 text-sm transition-colors',
                   isActive
                     ? 'border-primary bg-primary text-primary-foreground'
                     : 'hover:border-primary/60 hover:text-primary'
-                }`}
+                )}
               >
                 {child.name}
               </Link>
@@ -75,7 +77,7 @@ export default async function SubcategoryPage({ params }: Props) {
       {/* Entry list */}
       <div className="mt-10">
         {entries.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-16 text-center text-muted-foreground">
+          <div className="border border-dashed py-16 text-center text-muted-foreground">
             No published entries yet in this topic.
           </div>
         ) : (

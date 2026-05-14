@@ -66,7 +66,7 @@ export function ExtractionForm() {
       />
 
       {status === 'streaming' && (
-        <div className="rounded-md border bg-muted/30 p-4">
+        <div className="border bg-muted/30 p-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
             Extracting knowledge…

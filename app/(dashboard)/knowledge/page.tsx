@@ -56,7 +56,7 @@ export default async function KnowledgePage({
             >
               {tab.label}
               {count > 0 && (
-                <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs">
+                <span className="ml-1.5 bg-muted px-1.5 py-0.5 text-xs">
                   {count}
                 </span>
               )}
@@ -66,7 +66,7 @@ export default async function KnowledgePage({
       </div>
 
       {entries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
+        <div className="flex flex-col items-center justify-center border border-dashed py-16 text-center">
           <p className="text-sm text-muted-foreground">No entries yet.</p>
           <Button asChild className="mt-4" variant="outline">
             <Link href="/knowledge/new">Create your first entry</Link>

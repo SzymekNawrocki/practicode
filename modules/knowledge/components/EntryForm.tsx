@@ -297,7 +297,7 @@ function StringListField({
       {items.length > 0 && (
         <ul className="space-y-1">
           {items.map((item, i) => (
-            <li key={`${label}-${i}-${item}`} className="flex items-center justify-between rounded-md bg-muted px-3 py-1.5 text-sm">
+            <li key={`${label}-${i}-${item}`} className="flex items-center justify-between bg-muted px-3 py-1.5 text-sm">
               <span>{item}</span>
               <button type="button" onClick={() => onRemove(i)} aria-label="Remove item" className="text-muted-foreground hover:text-destructive ml-2">×</button>
             </li>

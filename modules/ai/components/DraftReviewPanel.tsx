@@ -30,7 +30,7 @@ export function DraftReviewPanel({ draft, rawText, onReset }: Props) {
   }
 
   return (
-    <div className="space-y-6 rounded-lg border p-6">
+    <div className="space-y-6 border p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">{draft.title}</h2>
@@ -74,7 +74,7 @@ export function DraftReviewPanel({ draft, rawText, onReset }: Props) {
         <section className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Examples</h3>
           {draft.examples.map((ex, i) => (
-            <div key={i} className="rounded-md bg-muted p-3 space-y-1">
+            <div key={i} className="bg-muted p-3 space-y-1">
               {ex.description && <p className="text-xs text-muted-foreground">{ex.description}</p>}
               <pre className="text-xs overflow-x-auto"><code>{ex.code}</code></pre>
             </div>

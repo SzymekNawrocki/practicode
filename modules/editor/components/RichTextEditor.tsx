@@ -24,33 +24,33 @@ export function RichTextEditor({ content, onChange, placeholder, className }: Pr
   })
 
   return (
-    <div className={cn('rounded-md border border-input bg-background text-sm', className)}>
+    <div className={cn('border border-input bg-background text-sm', className)}>
       {editor && (
         <div className="flex flex-wrap gap-1 border-b px-2 py-1">
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={cn('rounded px-1.5 py-0.5 text-xs', editor.isActive('bold') ? 'bg-muted' : 'hover:bg-muted')}
+            className={cn('px-1.5 py-0.5 text-xs', editor.isActive('bold') ? 'bg-muted' : 'hover:bg-muted')}
           >B</button>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={cn('rounded px-1.5 py-0.5 text-xs italic', editor.isActive('italic') ? 'bg-muted' : 'hover:bg-muted')}
+            className={cn('px-1.5 py-0.5 text-xs italic', editor.isActive('italic') ? 'bg-muted' : 'hover:bg-muted')}
           >I</button>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleCode().run()}
-            className={cn('rounded px-1.5 py-0.5 text-xs font-mono', editor.isActive('code') ? 'bg-muted' : 'hover:bg-muted')}
+            className={cn('px-1.5 py-0.5 text-xs font-mono', editor.isActive('code') ? 'bg-muted' : 'hover:bg-muted')}
           >`</button>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={cn('rounded px-1.5 py-0.5 text-xs', editor.isActive('bulletList') ? 'bg-muted' : 'hover:bg-muted')}
+            className={cn('px-1.5 py-0.5 text-xs', editor.isActive('bulletList') ? 'bg-muted' : 'hover:bg-muted')}
           >•</button>
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            className={cn('rounded px-1.5 py-0.5 text-xs font-mono', editor.isActive('codeBlock') ? 'bg-muted' : 'hover:bg-muted')}
+            className={cn('px-1.5 py-0.5 text-xs font-mono', editor.isActive('codeBlock') ? 'bg-muted' : 'hover:bg-muted')}
           >{"</>"}</button>
         </div>
       )}

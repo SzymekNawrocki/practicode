@@ -49,7 +49,7 @@ export default async function CategoryPage({ params }: Props) {
                 <Link
                   key={child.id}
                   href={`/browse/${categorySlug}/${subSlug}`}
-                  className="rounded-full border px-3 py-1 text-sm hover:border-primary/60 hover:text-primary transition-colors"
+                  className="border px-3 py-1 text-sm hover:border-primary/60 hover:text-primary transition-colors"
                 >
                   {child.name}
                 </Link>

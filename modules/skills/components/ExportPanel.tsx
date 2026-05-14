@@ -62,7 +62,7 @@ export function ExportPanel() {
       </div>
 
       {preview && (
-        <div className="rounded-md border bg-muted/30">
+        <div className="border bg-muted/30">
           <div className="flex items-center justify-between border-b px-4 py-2">
             <span className="text-xs text-muted-foreground font-mono">
               {formats.find((f) => f.id === format)!.label}
