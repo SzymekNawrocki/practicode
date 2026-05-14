@@ -6,13 +6,20 @@ import { Separator } from '@/components/ui/separator'
 import { EntryStatusBadge } from '@/modules/knowledge/components/EntryStatusBadge'
 import { knowledgeService }  from '@/modules/knowledge/services/knowledge.service'
 import { deleteEntry, publishEntry } from '@/modules/knowledge/actions/knowledge.actions'
+import { requireAuth } from '@/lib/auth/require-auth'
 
 type Props = { params: Promise<{ slug: string }> }
 
 export default async function EntryDetailPage({ params }: Props) {
   const { slug } = await params
-  const entry = await knowledgeService.getBySlug(slug)
+  const [entry, currentUser] = await Promise.all([
+    knowledgeService.getBySlug(slug),
+    requireAuth(),
+  ])
   if (!entry) notFound()
+
+  const canEdit   = currentUser.role === 'admin' || currentUser.role === 'editor'
+  const canDelete = currentUser.role === 'admin'
 
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
@@ -26,17 +33,21 @@ export default async function EntryDetailPage({ params }: Props) {
           <p className="text-muted-foreground">{entry.summary}</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          {entry.status !== 'published' && (
+          {canEdit && entry.status !== 'published' && (
             <form action={publishEntry.bind(null, slug)}>
               <Button variant="outline" size="sm" type="submit">Publish</Button>
             </form>
           )}
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/knowledge/${slug}/edit`}>Edit</Link>
-          </Button>
-          <form action={deleteEntry.bind(null, slug)}>
-            <Button variant="destructive" size="sm" type="submit">Delete</Button>
-          </form>
+          {canEdit && (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/knowledge/${slug}/edit`}>Edit</Link>
+            </Button>
+          )}
+          {canDelete && (
+            <form action={deleteEntry.bind(null, slug)}>
+              <Button variant="destructive" size="sm" type="submit">Delete</Button>
+            </form>
+          )}
         </div>
       </div>
 

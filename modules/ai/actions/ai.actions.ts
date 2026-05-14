@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect }       from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireRole } from '@/lib/auth/require-auth'
 import { db } from '@/db/client'
 import { aiDrafts, knowledgeEntries } from '@/db/schema'
 import { KnowledgeEntryDraftSchema } from '../schemas/ai.schema'
@@ -10,15 +10,8 @@ import type { KnowledgeEntryDraft } from '../schemas/ai.schema'
 import { eq } from 'drizzle-orm'
 import { toSlug } from '@/lib/utils/slug'
 
-async function getAuthUser() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return user
-}
-
 export async function saveDraft(rawInput: string, structuredOutput: KnowledgeEntryDraft) {
-  const user = await getAuthUser()
+  const user = await requireRole('editor')
 
   const parsed = KnowledgeEntryDraftSchema.safeParse(structuredOutput)
   if (!parsed.success) throw new Error('Invalid draft structure')
@@ -34,7 +27,7 @@ export async function saveDraft(rawInput: string, structuredOutput: KnowledgeEnt
 }
 
 export async function acceptDraft(draftId: string) {
-  const user = await getAuthUser()
+  const user = await requireRole('editor')
 
   const draft = await db.query.aiDrafts.findFirst({ where: eq(aiDrafts.id, draftId) })
   if (!draft) throw new Error('Draft not found')

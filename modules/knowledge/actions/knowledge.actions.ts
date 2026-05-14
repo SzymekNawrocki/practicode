@@ -2,17 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect }       from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireAuth, requireRole } from '@/lib/auth/require-auth'
 import { KnowledgeEntryUpdateSchema, QuickCreateSchema } from '../schemas/knowledge.schema'
 import { knowledgeService } from '../services/knowledge.service'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
-
-async function getAuthUser() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-  return user
-}
 
 function extractSummary(html: string | undefined, title: string): string {
   const text = (html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -29,7 +22,7 @@ function parseJsonField(formData: FormData, name: string): unknown[] {
 }
 
 export async function createEntry(_prev: KnowledgeEntryFormState, formData: FormData): Promise<KnowledgeEntryFormState> {
-  const user = await getAuthUser()
+  const user = await requireRole('editor')
 
   const raw = {
     title:       formData.get('title'),
@@ -52,7 +45,7 @@ export async function createEntry(_prev: KnowledgeEntryFormState, formData: Form
 }
 
 export async function updateEntry(_prev: KnowledgeEntryFormState, formData: FormData): Promise<KnowledgeEntryFormState> {
-  await getAuthUser()
+  await requireRole('editor')
 
   const raw = {
     slug:                formData.get('slug'),
@@ -80,14 +73,14 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
 }
 
 export async function deleteEntry(slug: string) {
-  await getAuthUser()
+  await requireRole('admin')
   await knowledgeService.delete(slug)
   revalidatePath('/knowledge')
   redirect('/knowledge')
 }
 
 export async function publishEntry(slug: string) {
-  await getAuthUser()
+  await requireRole('editor')
   await knowledgeService.update(slug, { status: 'published' })
   revalidatePath('/knowledge')
   revalidatePath(`/knowledge/${slug}`)
