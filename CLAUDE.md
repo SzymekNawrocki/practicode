@@ -12,6 +12,7 @@ AI-assisted software engineering knowledge platform. A structured knowledge base
 |---|---|
 | Framework | Next.js 16.2.6 (App Router, Server Components) |
 | UI | React 19, TypeScript strict, Tailwind CSS v4, shadcn/ui |
+| Theme | `next-themes` — dark/light/system toggle, `attribute="class"` |
 | Editor | Tiptap v3 |
 | Database | Supabase (PostgreSQL), Drizzle ORM v0.45, postgres.js |
 | Validation | Zod v4 |
@@ -32,8 +33,8 @@ modules/
       category.service.ts    ← listAll(), listWithChildren(), getBySlug()
     components/
       EntryCard.tsx          ← dashboard card → /knowledge/[slug]
-      PublicEntryCard.tsx    ← public card → /entry/[slug]
-      EntryForm.tsx          ← create/edit form (accepts categories[] prop for grouped select)
+      PublicEntryCard.tsx    ← public card → /entry/[slug] (uses Card component, matches EntryCard structure)
+      EntryForm.tsx          ← create/edit form (shadcn Select for status/category, shadcn Input for all text)
   ai/           ← extraction pipeline (OpenRouter → structured draft → human review)
   editor/       ← Tiptap wrapper components
   auth/         ← Supabase auth actions + client helpers
@@ -43,20 +44,33 @@ modules/
 app/
   page.tsx              ← public homepage (hero + category grid + search)
   (public)/             ← no auth required
-    layout.tsx          ← PublicHeader (sticky, logo + nav + sign in)
-    browse/[categorySlug]/page.tsx
-    browse/[categorySlug]/[subSlug]/page.tsx
-    entry/[slug]/page.tsx
-    search/page.tsx
-  (dashboard)/          ← auth required
-    knowledge/          ← list, new, [slug], [slug]/edit
+    layout.tsx          ← PublicHeader + PublicFooter
+    error.tsx           ← error boundary (client component, reset button)
+    browse/[categorySlug]/page.tsx        ← has generateMetadata, loading.tsx
+    browse/[categorySlug]/[subSlug]/page.tsx  ← has generateMetadata, loading.tsx
+    entry/[slug]/page.tsx                 ← has generateMetadata, loading.tsx, not-found.tsx
+    search/page.tsx                       ← loading.tsx
+  (dashboard)/          ← auth required (layout redirects unauthenticated → /login)
+    error.tsx           ← error boundary
+    knowledge/          ← list, new, [slug], [slug]/edit — each has loading.tsx; [slug] has not-found.tsx
     ai/extract/
     skills/
   (auth)/login/
 
 components/
-  public-header.tsx     ← shared header used by (public) layout and homepage
+  public-header.tsx     ← shared header (public layout + homepage); includes ThemeToggle
+  public-footer.tsx     ← shared footer (public layout + homepage)
+  theme-provider.tsx    ← next-themes ThemeProvider wrapper
+  theme-toggle.tsx      ← ☀/☾/◑ button cycling light → dark → system
   ui/                   ← shadcn components
+
+lib/
+  env.ts        ← Zod-validated env (crashes at startup on missing vars)
+  utils/
+    slug.ts     ← toSlug(text, suffix?) — shared slug generation utility
+  supabase/
+    server.ts   ← createSupabaseServerClient() — ALWAYS await cookies()
+    client.ts   ← createSupabaseBrowserClient()
 
 db/
   schema/       ← Drizzle table definitions (users, knowledge_entries, tags, categories,
@@ -64,12 +78,6 @@ db/
   migrations/   ← drizzle-kit generated SQL (committed)
   seed.ts       ← inserts 56 category rows (7 parents × 7 children) — run once
   client.ts     ← singleton drizzle + postgres.js (HMR-safe via globalThis)
-
-lib/
-  env.ts        ← Zod-validated env (crashes at startup on missing vars)
-  supabase/
-    server.ts   ← createSupabaseServerClient() — ALWAYS await cookies()
-    client.ts   ← createSupabaseBrowserClient()
 ```
 
 ---
@@ -86,6 +94,7 @@ lib/
 - `cookies()` is **async** in Next.js 16 — always `await cookies()`
 - Auth guard lives in `proxy.ts` (NOT `middleware.ts` — renamed in Next.js 16)
 - Every Server Action checks auth via `createSupabaseServerClient()` before mutating
+- Dashboard layout also redirects unauthenticated users to `/login` (defence-in-depth)
 
 ### Server Actions vs Route Handlers
 - **Server Actions** for all CRUD, auth, search, and export
@@ -108,12 +117,13 @@ lib/
 ### Validation
 - Zod on all Server Action inputs and Route Handler request bodies
 - `lib/env.ts` validates all env vars at module load time
+- `JSON.parse` from FormData must use the `parseJsonField()` helper in `knowledge.actions.ts` — never raw `JSON.parse`
 
 ### Routing
 - Route groups: `(auth)` for login, `(dashboard)` for protected app, `(public)` for unauthenticated pages
 - `app/(dashboard)/layout.tsx` contains `QueryClientProvider` (Client Component wrapper around Server Component children)
-- `app/(public)/layout.tsx` — shared public header (logo, Browse, Search, Sign in)
-- `app/page.tsx` — public homepage (outside route groups, no sidebar)
+- `app/(public)/layout.tsx` — `PublicHeader` + `PublicFooter` (both extracted as shared components)
+- `app/page.tsx` — public homepage (outside route groups, renders `PublicHeader` + `PublicFooter` directly)
 - Public routes whitelisted in `proxy.ts`: `/`, `/browse/**`, `/entry/**`, `/search`
 - Dashboard routes (`/knowledge/**`, `/ai/**`, `/skills/**`) remain auth-protected
 
@@ -122,6 +132,19 @@ lib/
 - Auth required only to create/edit (contributor model)
 - Public routes: `/browse/[categorySlug]`, `/browse/[categorySlug]/[subSlug]`, `/entry/[slug]`, `/search`
 - `PublicEntryCard` links to `/entry/[slug]`; dashboard `EntryCard` links to `/knowledge/[slug]`
+- All three public dynamic routes export `generateMetadata` for SEO
+
+### Theming & dark mode
+- `ThemeProvider` wraps the root layout with `attribute="class"`, `defaultTheme="system"`, `enableSystem`
+- `.dark` class on `<html>` activates dark theme — all CSS vars defined in `app/globals.css`
+- Use `text-success` / `text-destructive` for semantic good/bad colours — never `text-green-*` or `text-red-*`
+- Custom Tailwind utilities are declared with `@utility` (Tailwind v4 syntax) — **not** `@layer utilities`
+- Tag colours use CSS custom property: `style={{ '--tag-color': tag.color } as React.CSSProperties}` + `className="tag-colored"`
+
+### UI components
+- Always use shadcn primitives — never raw `<input>`, `<select>`, or `<button>` in UI code
+- `EntryCard` and `PublicEntryCard` share the same Card/CardHeader/CardTitle/CardContent structure
+- Slug generation: import `toSlug` from `lib/utils/slug.ts` — do not inline the regex
 
 ---
 
@@ -141,7 +164,7 @@ lib/
 
 ## shadcn/ui Components Available
 
-accordion, alert-dialog, badge, button, card, command, dialog, dropdown-menu, input, input-group, label, scroll-area, separator, sheet, skeleton, tabs, textarea, tooltip
+accordion, alert-dialog, badge, button, card, command, dialog, dropdown-menu, input, input-group, label, scroll-area, select, separator, sheet, skeleton, tabs, textarea, tooltip
 
 Add more with: `npx shadcn add <component>`
 
