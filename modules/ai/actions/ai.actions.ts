@@ -26,7 +26,8 @@ export async function saveDraft(rawInput: string, structuredOutput: KnowledgeEnt
   return { draftId: draft.id }
 }
 
-export async function acceptDraft(draftId: string) {
+export async function acceptDraft(draftId: string, opts?: { redirect?: boolean }) {
+  const shouldRedirect = opts?.redirect !== false
   const user = await requireRole('editor')
 
   const draft = await db.query.aiDrafts.findFirst({ where: eq(aiDrafts.id, draftId) })
@@ -56,5 +57,6 @@ export async function acceptDraft(draftId: string) {
     .where(eq(aiDrafts.id, draftId))
 
   revalidatePath('/knowledge')
-  redirect(`/knowledge/${entry.slug}/edit`)
+  if (shouldRedirect) redirect(`/knowledge/${entry.slug}/edit`)
+  return { entrySlug: entry.slug }
 }

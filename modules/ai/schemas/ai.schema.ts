@@ -20,3 +20,9 @@ export const KnowledgeEntryDraftSchema = z.object({
 })
 
 export type KnowledgeEntryDraft = z.infer<typeof KnowledgeEntryDraftSchema>
+
+export const BatchKnowledgeExtractionSchema = z.object({
+  entries: z.array(KnowledgeEntryDraftSchema).min(1).max(10),
+})
+
+export type BatchKnowledgeExtraction = z.infer<typeof BatchKnowledgeExtractionSchema>

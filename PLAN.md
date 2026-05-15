@@ -72,7 +72,7 @@ All 7 Phase 1 steps implemented and committed. The app is fully runnable: login 
 - [x] Category hierarchy filter on dashboard knowledge list
 - [ ] Tag assignment in EntryForm (multi-select, writes to entry_tags)
 - [ ] Tech filter pill on public browse UI (filters by system tags)
-- [ ] Batch extraction (multiple entries from one long transcript)
+- [x] Batch extraction (multiple entries from one long transcript)
 - [ ] AI-suggested related entries (vector similarity via pgvector)
 
 ---
