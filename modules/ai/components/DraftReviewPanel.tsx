@@ -1,20 +1,32 @@
 'use client'
 
-import { useTransition } from 'react'
-import { Button }   from '@/components/ui/button'
-import { Badge }    from '@/components/ui/badge'
+import { useState, useTransition } from 'react'
+import { Button }    from '@/components/ui/button'
+import { Badge }     from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { saveDraft, acceptDraft } from '../actions/ai.actions'
 import type { KnowledgeEntryDraft } from '../schemas/ai.schema'
+import type { CategoryWithChildren } from '@/modules/knowledge/services/category.service'
 
 type Props = {
-  draft:    KnowledgeEntryDraft
-  rawText:  string
-  onReset:  () => void
+  draft:      KnowledgeEntryDraft
+  rawText:    string
+  categories: CategoryWithChildren[]
+  onReset:    () => void
 }
 
-export function DraftReviewPanel({ draft, rawText, onReset }: Props) {
+export function DraftReviewPanel({ draft, rawText, categories, onReset }: Props) {
   const [pending, startTransition] = useTransition()
+  const [categoryId, setCategoryId] = useState<string>('')
 
   function handleSave() {
     startTransition(async () => {
@@ -25,7 +37,7 @@ export function DraftReviewPanel({ draft, rawText, onReset }: Props) {
   function handleAccept() {
     startTransition(async () => {
       const { draftId } = await saveDraft(rawText, draft)
-      await acceptDraft(draftId)
+      await acceptDraft(draftId, { categoryId: categoryId || undefined })
     })
   }
 
@@ -94,6 +106,26 @@ export function DraftReviewPanel({ draft, rawText, onReset }: Props) {
       )}
 
       <Separator />
+
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-muted-foreground shrink-0">Category</span>
+        <Select value={categoryId} onValueChange={setCategoryId}>
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="No category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">No category</SelectItem>
+            {categories.map((parent) => (
+              <SelectGroup key={parent.id}>
+                <SelectLabel>{parent.name}</SelectLabel>
+                {parent.children.map((child) => (
+                  <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="flex gap-2 justify-end">
         <Button variant="ghost" onClick={onReset} disabled={pending}>

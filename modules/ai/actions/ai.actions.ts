@@ -27,7 +27,7 @@ export async function saveDraft(rawInput: string, structuredOutput: KnowledgeEnt
   return { draftId: draft.id }
 }
 
-export async function acceptDraft(draftId: string, opts?: { redirect?: boolean }) {
+export async function acceptDraft(draftId: string, opts?: { redirect?: boolean; categoryId?: string }) {
   const shouldRedirect = opts?.redirect !== false
   const user = await requireRole('editor')
 
@@ -49,6 +49,7 @@ export async function acceptDraft(draftId: string, opts?: { redirect?: boolean }
     refactoringGuidance: data.refactoringGuidance,
     relatedConcepts:     data.relatedConcepts,
     status:              'in_review',        // NEVER published directly
+    categoryId:          opts?.categoryId ?? null,
     createdBy:           user.id,
   }).returning()
 

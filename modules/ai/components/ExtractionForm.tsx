@@ -5,8 +5,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { DraftReviewPanel } from './DraftReviewPanel'
 import { useExtractionStore } from '../store/extraction.store'
 import { KnowledgeEntryDraftSchema } from '../schemas/ai.schema'
+import type { CategoryWithChildren } from '@/modules/knowledge/services/category.service'
 
-export function ExtractionForm() {
+type Props = {
+  categories: CategoryWithChildren[]
+}
+
+export function ExtractionForm({ categories }: Props) {
   const { status, rawText, streamedJson, draft, error, setRawText, startStreaming, appendToken, setComplete, setError, reset } =
     useExtractionStore()
 
@@ -51,7 +56,7 @@ export function ExtractionForm() {
   }
 
   if (status === 'complete' && draft) {
-    return <DraftReviewPanel draft={draft} rawText={rawText} onReset={reset} />
+    return <DraftReviewPanel draft={draft} rawText={rawText} categories={categories} onReset={reset} />
   }
 
   return (

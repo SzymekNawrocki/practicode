@@ -1,8 +1,11 @@
 import { ExtractionForm }      from '@/modules/ai/components/ExtractionForm'
 import { BatchExtractionForm } from '@/modules/ai/components/BatchExtractionForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { categoryService } from '@/modules/knowledge/services/category.service'
 
-export default function AIExtractPage() {
+export default async function AIExtractPage() {
+  const categories = await categoryService.listWithChildren()
+
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
       <div>
@@ -19,11 +22,11 @@ export default function AIExtractPage() {
         </TabsList>
 
         <TabsContent value="single" className="mt-4">
-          <ExtractionForm />
+          <ExtractionForm categories={categories} />
         </TabsContent>
 
         <TabsContent value="batch" className="mt-4">
-          <BatchExtractionForm />
+          <BatchExtractionForm categories={categories} />
         </TabsContent>
       </Tabs>
     </div>

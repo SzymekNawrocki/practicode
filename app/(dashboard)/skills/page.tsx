@@ -1,6 +1,9 @@
 import { ExportPanel } from '@/modules/skills/components/ExportPanel'
+import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 
-export default function SkillsPage() {
+export default async function SkillsPage() {
+  const entries = await knowledgeService.list({ status: 'published', limit: 100 })
+
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
       <div>
@@ -9,7 +12,7 @@ export default function SkillsPage() {
           Export your published knowledge entries as AI-ready context files.
         </p>
       </div>
-      <ExportPanel />
+      <ExportPanel entries={entries} />
     </div>
   )
 }

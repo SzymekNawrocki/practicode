@@ -5,8 +5,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { BatchDraftCard } from './BatchDraftCard'
 import { useBatchExtractionStore } from '../store/batch-extraction.store'
 import { BatchKnowledgeExtractionSchema } from '../schemas/ai.schema'
+import type { CategoryWithChildren } from '@/modules/knowledge/services/category.service'
 
-export function BatchExtractionForm() {
+type Props = {
+  categories: CategoryWithChildren[]
+}
+
+export function BatchExtractionForm({ categories }: Props) {
   const { status, rawText, items, error, setRawText, startStreaming, setComplete, setError, markAccepted, markRejected, reset } =
     useBatchExtractionStore()
 
@@ -113,6 +118,7 @@ export function BatchExtractionForm() {
               accepted={item.accepted}
               rejected={item.rejected}
               rawText={rawText}
+              categories={categories}
               onAccepted={markAccepted}
               onRejected={markRejected}
             />

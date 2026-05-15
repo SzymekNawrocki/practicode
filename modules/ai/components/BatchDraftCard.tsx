@@ -1,11 +1,21 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { Button }    from '@/components/ui/button'
 import { Badge }     from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { saveDraft, acceptDraft } from '../actions/ai.actions'
 import type { KnowledgeEntryDraft } from '../schemas/ai.schema'
+import type { CategoryWithChildren } from '@/modules/knowledge/services/category.service'
 
 type Props = {
   draft:        KnowledgeEntryDraft
@@ -13,17 +23,19 @@ type Props = {
   accepted:     boolean
   rejected:     boolean
   rawText:      string
+  categories:   CategoryWithChildren[]
   onAccepted:   (index: number) => void
   onRejected:   (index: number) => void
 }
 
-export function BatchDraftCard({ draft, index, accepted, rejected, rawText, onAccepted, onRejected }: Props) {
+export function BatchDraftCard({ draft, index, accepted, rejected, rawText, categories, onAccepted, onRejected }: Props) {
   const [pending, startTransition] = useTransition()
+  const [categoryId, setCategoryId] = useState<string>('')
 
   function handleAccept() {
     startTransition(async () => {
       const { draftId } = await saveDraft(rawText, draft)
-      await acceptDraft(draftId, { redirect: false })
+      await acceptDraft(draftId, { redirect: false, categoryId: categoryId || undefined })
       onAccepted(index)
     })
   }
@@ -74,13 +86,36 @@ export function BatchDraftCard({ draft, index, accepted, rejected, rawText, onAc
             </>
           )}
 
-          <div className="flex gap-2 justify-end pt-1">
-            <Button variant="ghost" size="sm" onClick={handleReject} disabled={pending}>
-              Dismiss
-            </Button>
-            <Button size="sm" onClick={handleAccept} disabled={pending}>
-              {pending ? 'Creating…' : 'Accept → Create entry'}
-            </Button>
+          <Separator />
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground shrink-0">Category</span>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="h-8 text-xs w-52">
+                  <SelectValue placeholder="No category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No category</SelectItem>
+                  {categories.map((parent) => (
+                    <SelectGroup key={parent.id}>
+                      <SelectLabel>{parent.name}</SelectLabel>
+                      {parent.children.map((child) => (
+                        <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={handleReject} disabled={pending}>
+                Dismiss
+              </Button>
+              <Button size="sm" onClick={handleAccept} disabled={pending}>
+                {pending ? 'Creating…' : 'Accept → Create entry'}
+              </Button>
+            </div>
           </div>
         </>
       )}

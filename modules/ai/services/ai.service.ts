@@ -13,8 +13,9 @@ const MODEL = 'meta-llama/llama-3.3-70b-instruct'
 const SINGLE_SYSTEM_PROMPT = `You are an expert software engineering educator and knowledge curator.
 Extract structured engineering knowledge from the provided text.
 Focus on actionable best practices, concrete anti-patterns, and clear explanations.
-Keep best practices and anti-patterns as concise bullet points (1-2 sentences each).
-Include code examples only if the source text contains relevant code snippets.
+Write the explanation as a thorough technical walkthrough (3–5 sentences minimum).
+Best practices and anti-patterns should be clear and detailed (up to 3 sentences each).
+Always include at least one code example illustrating the concept — synthesise a representative snippet if the source text does not contain one. Prefer TypeScript or the most relevant language for the topic.
 Suggested tags should be lowercase keywords like "solid", "clean-code", "refactoring", "typescript".`
 
 const BATCH_SYSTEM_PROMPT = `You are an expert software engineering educator and knowledge curator.
@@ -22,8 +23,9 @@ Extract ALL distinct engineering concepts from the provided transcript or articl
 For each concept, produce a separate, self-contained knowledge entry.
 Aim for 3–8 entries — split by distinct concept, not by section headings.
 Each entry should stand alone and be understandable without the others.
-Keep best practices and anti-patterns as concise bullet points (1-2 sentences each).
-Include code examples only if the source text contains relevant code snippets.
+Write each explanation as a thorough technical walkthrough (3–5 sentences minimum).
+Best practices and anti-patterns should be clear and detailed (up to 3 sentences each).
+Always include at least one code example per entry illustrating the concept — synthesise a representative snippet if the source text does not contain one. Prefer TypeScript or the most relevant language for the topic.
 Suggested tags should be lowercase keywords like "solid", "clean-code", "refactoring", "typescript".`
 
 export async function streamKnowledgeDraft(rawText: string) {

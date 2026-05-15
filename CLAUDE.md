@@ -131,7 +131,9 @@ db/
 - Embedding model: `openai/text-embedding-3-small` via OpenRouter — 1536 dimensions
 - `acceptDraft()` generates an embedding after creating the entry — fire-and-forget, failure doesn't block the accept
 - `acceptDraft()` accepts `{ redirect: false }` for batch mode (does not navigate away after each accept)
+- `acceptDraft()` accepts `{ categoryId }` — set by the category dropdown in `DraftReviewPanel` / `BatchDraftCard` at review time
 - Batch mode: `BatchExtractionForm` streams the full JSON blob, then reveals N cards simultaneously — no partial-object rendering
+- AI prompts require at least one code example per entry (synthesised if source has none) and a 3–5 sentence explanation
 
 ### Validation
 - Zod on all Server Action inputs and Route Handler request bodies
@@ -190,7 +192,7 @@ db/
 
 ## shadcn/ui Components Available
 
-accordion, alert-dialog, badge, button, card, command, dialog, dropdown-menu, input, input-group, label, scroll-area, select, separator, sheet, skeleton, tabs, textarea, tooltip
+accordion, alert-dialog, badge, button, card, checkbox, command, dialog, dropdown-menu, input, input-group, label, scroll-area, select, separator, sheet, skeleton, tabs, textarea, tooltip
 
 Add more with: `npx shadcn add <component>`
 
