@@ -24,9 +24,10 @@ export default async function PublicEntryPage({ params }: Props) {
 
   if (!entry || entry.status !== 'published') notFound()
 
-  const [catWithParent, moreRaw] = await Promise.all([
+  const [catWithParent, moreRaw, similar] = await Promise.all([
     entry.category ? categoryService.getBySlug(entry.category.slug) : null,
     entry.categoryId ? knowledgeService.listPublishedByCategory(entry.categoryId, 4) : Promise.resolve([]),
+    entry.embedding ? knowledgeService.findSimilar(entry.id, entry.embedding) : Promise.resolve([]),
   ])
 
   const moreEntries = moreRaw.filter(e => e.id !== entry.id).slice(0, 3)
@@ -182,6 +183,22 @@ export default async function PublicEntryPage({ params }: Props) {
           </section>
         )
       })()}
+
+      {/* AI-suggested similar entries */}
+      {similar.length > 0 && (
+        <section className="mt-10 border-t pt-8">
+          <h2 className="mb-4 text-base font-semibold">You might also like</h2>
+          <div className="space-y-3">
+            {similar.map((e) => (
+              <a key={e.id} href={`/entry/${e.slug}`}
+                 className="block border p-4 hover:bg-muted transition-colors">
+                <p className="font-medium text-sm">{e.title}</p>
+                {e.summary && <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{e.summary}</p>}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* More in this category */}
       {moreEntries.length > 0 && (

@@ -1,7 +1,7 @@
 import 'server-only'
 import { db } from '@/db/client'
 import { knowledgeEntries, entryTags, entryRelationships } from '@/db/schema'
-import { desc, eq, or, ilike, and } from 'drizzle-orm'
+import { desc, eq, or, ilike, and, isNotNull, sql } from 'drizzle-orm'
 import type { KnowledgeEntryInsert } from '@/db/schema'
 
 type RelationshipType = 'related_to' | 'extends' | 'contradicts' | 'refactors'
@@ -73,6 +73,25 @@ export const knowledgeService = {
         eq(entryRelationships.relationshipType, type),
       )
     )
+  },
+
+  async findSimilar(entryId: string, embedding: number[], limit = 4) {
+    const embStr = `[${embedding.join(',')}]`
+    return db
+      .select({
+        id:      knowledgeEntries.id,
+        slug:    knowledgeEntries.slug,
+        title:   knowledgeEntries.title,
+        summary: knowledgeEntries.summary,
+      })
+      .from(knowledgeEntries)
+      .where(and(
+        eq(knowledgeEntries.status, 'published'),
+        isNotNull(knowledgeEntries.embedding),
+        sql`${knowledgeEntries.id} != ${entryId}::uuid`,
+      ))
+      .orderBy(sql`${knowledgeEntries.embedding} <=> ${embStr}::vector`)
+      .limit(limit)
   },
 
   async search(query: string) {

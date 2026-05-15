@@ -19,6 +19,10 @@ export default async function EntryDetailPage({ params }: Props) {
   ])
   if (!entry) notFound()
 
+  const similar = entry.embedding
+    ? await knowledgeService.findSimilar(entry.id, entry.embedding)
+    : []
+
   const canEdit   = currentUser.role === 'admin' || currentUser.role === 'editor'
   const canDelete = currentUser.role === 'admin'
 
@@ -138,6 +142,24 @@ export default async function EntryDetailPage({ params }: Props) {
             ))}
           </div>
         </section>
+      )}
+
+      {similar.length > 0 && (
+        <>
+          <Separator />
+          <section className="space-y-2">
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">AI-Suggested Similar</h2>
+            <div className="space-y-2">
+              {similar.map((e) => (
+                <Link key={e.id} href={`/knowledge/${e.slug}`}
+                      className="block border p-3 text-sm hover:bg-muted transition-colors">
+                  <p className="font-medium">{e.title}</p>
+                  {e.summary && <p className="text-muted-foreground mt-0.5 line-clamp-1">{e.summary}</p>}
+                </Link>
+              ))}
+            </div>
+          </section>
+        </>
       )}
 
       <Separator />

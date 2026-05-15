@@ -1,5 +1,14 @@
-import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { customType, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
+
+const vector = customType<{ data: number[]; config: { dimensions: number }; configRequired: true; driverData: string }>({
+  dataType(config) { return `vector(${config.dimensions})` },
+  toDriver(value)  { return `[${value.join(',')}]` },
+  fromDriver(raw)  {
+    const s = raw as string
+    return s.slice(1, -1).split(',').map(Number)
+  },
+})
 import { categories } from './categories'
 import { users } from './users'
 import { entryTags } from './tags-junction'
@@ -26,6 +35,7 @@ export const knowledgeEntries = pgTable('knowledge_entries', {
   refactoringGuidance: text('refactoring_guidance'),
   relatedConcepts:     jsonb('related_concepts').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   status:              entryStatusEnum('status').notNull().default('draft'),
+  embedding:           vector('embedding', { dimensions: 1536 }),
   categoryId:          uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
   createdBy:           uuid('created_by').notNull().references(() => users.id),
   createdAt:           timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

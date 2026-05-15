@@ -73,7 +73,7 @@ All 7 Phase 1 steps implemented and committed. The app is fully runnable: login 
 - [ ] Tag assignment in EntryForm (multi-select, writes to entry_tags)
 - [ ] Tech filter pill on public browse UI (filters by system tags)
 - [x] Batch extraction (multiple entries from one long transcript)
-- [ ] AI-suggested related entries (vector similarity via pgvector)
+- [x] AI-suggested related entries (vector similarity via pgvector)
 
 ---
 
