@@ -67,11 +67,13 @@ All 7 Phase 1 steps implemented and committed. The app is fully runnable: login 
 
 ## Phase 2 — AI Enhancement
 
-- [ ] Entry relationship UI (graph view, add/remove edges)
-- [ ] AI-suggested related entries (vector similarity via pgvector)
+- [x] Entry relationship UI (link, unlink, see-also)
+- [x] User roles enforcement (admin/editor/viewer gates)
+- [x] Category hierarchy filter on dashboard knowledge list
+- [ ] Tag assignment in EntryForm (multi-select, writes to entry_tags)
+- [ ] Tech filter pill on public browse UI (filters by system tags)
 - [ ] Batch extraction (multiple entries from one long transcript)
-- [ ] User roles enforcement (admin/editor/viewer gates)
-- [ ] Category hierarchy UI
+- [ ] AI-suggested related entries (vector similarity via pgvector)
 
 ---
 
@@ -98,6 +100,9 @@ All 7 Phase 1 steps implemented and committed. The app is fully runnable: login 
 | JSONB vs normalized arrays | JSONB for best_practices/anti_patterns | Flexible schema during early iteration |
 | Search MVP | `ilike` | No tsvector setup complexity; sufficient for <10k entries |
 | Export storage | None — string → Blob in browser | No S3/storage needed for context pack downloads |
+| Category taxonomy | Topic-first only (35 categories: 7×5) | Tech-specific categories created content duplication — same concept (auth, error handling) split across tech subtrees |
+| Tech classification | System tags, not categories | Users filter by tech via tags; categories answer "what kind of concept"; tags answer "what tech" — avoids junction between browse hierarchy and tech filtering |
+| System tags | Seeded + protected (isSystem=true) | Prevents "fastapi"/"FastAPI"/"fast-api" proliferation; canonical set: TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL |
 
 ---
 

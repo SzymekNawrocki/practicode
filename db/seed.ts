@@ -111,63 +111,6 @@ async function main() {
         { name: 'Secure Coding',                  slug: 'security-coding'           },
       ],
     },
-    // ── Technology-specific ───────────────────────────────────────────────
-    {
-      parent: {
-        name:        'TypeScript',
-        slug:        'typescript',
-        description: 'Typed superset of JavaScript — types, generics, decorators, and tooling.',
-      },
-      children: [
-        { name: 'Types & Interfaces',      slug: 'typescript-types'       },
-        { name: 'Generics',                slug: 'typescript-generics'    },
-        { name: 'Decorators',              slug: 'typescript-decorators'  },
-        { name: 'Configuration & Tooling', slug: 'typescript-config'      },
-        { name: 'Advanced Patterns',       slug: 'typescript-patterns'    },
-      ],
-    },
-    {
-      parent: {
-        name:        'Next.js',
-        slug:        'nextjs',
-        description: 'React framework with App Router, Server Components, and full-stack capabilities.',
-      },
-      children: [
-        { name: 'App Router',                slug: 'nextjs-app-router'          },
-        { name: 'Data Fetching',             slug: 'nextjs-data-fetching'       },
-        { name: 'Server Components',         slug: 'nextjs-server-components'   },
-        { name: 'Routing & Layouts',         slug: 'nextjs-routing'             },
-        { name: 'Performance & Deployment',  slug: 'nextjs-performance'         },
-      ],
-    },
-    {
-      parent: {
-        name:        'FastAPI',
-        slug:        'fastapi',
-        description: 'Modern Python web framework for building APIs with automatic docs.',
-      },
-      children: [
-        { name: 'Routes & Endpoints',    slug: 'fastapi-routes'      },
-        { name: 'Pydantic & Validation', slug: 'fastapi-validation'  },
-        { name: 'Dependency Injection',  slug: 'fastapi-dependencies'},
-        { name: 'Authentication',        slug: 'fastapi-auth'        },
-        { name: 'Background Tasks',      slug: 'fastapi-background'  },
-      ],
-    },
-    {
-      parent: {
-        name:        'DevOps',
-        slug:        'devops',
-        description: 'CI/CD, containers, cloud infrastructure, and deployment practices.',
-      },
-      children: [
-        { name: 'CI/CD Pipelines',          slug: 'devops-cicd'        },
-        { name: 'Containers & Docker',      slug: 'devops-containers'  },
-        { name: 'Cloud & Infrastructure',   slug: 'devops-cloud'       },
-        { name: 'Monitoring & Logging',     slug: 'devops-monitoring'  },
-        { name: 'Kubernetes',               slug: 'devops-kubernetes'  },
-      ],
-    },
   ]
 
   // Insert parents

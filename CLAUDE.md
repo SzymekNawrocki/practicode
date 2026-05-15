@@ -153,8 +153,8 @@ db/
 | Table | Purpose |
 |---|---|
 | `users` | Mirrors `auth.users.id` from Supabase — role: admin/editor/viewer |
-| `categories` | 2-level hierarchy (self-ref `parent_id`). **56 rows seeded**: 7 tech parents (typescript, python, nextjs, fastapi, system-architecture, devops, git) × 7 topic children (best-practices, anti-patterns, design-patterns, security, performance, testing, core-concepts). Child slugs use `{parent}-{child}` pattern (e.g. `typescript-best-practices`). Drizzle relations require `relationName: 'parent_child'` on both sides of the self-join. |
-| `tags` | id, name, slug, color |
+| `categories` | 2-level hierarchy (self-ref `parent_id`). **35 rows seeded**: 7 topic-first parents (programming-fundamentals, data-structures, web-development, databases, system-design, software-craftsmanship, security) × 5 children each. Child slugs use `{parent}-{child}` pattern (e.g. `system-design-caching`). Drizzle relations require `relationName: 'parent_child'` on both sides of the self-join. Tech-specific classification is handled via system tags, not categories. |
+| `tags` | id, name, slug, color, is_system. System tags (TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL) are seeded via `db:seed-tags` and must not be deleted. |
 | `knowledge_entries` | Core entity — slug, title, summary, problem, explanation, best_practices[], anti_patterns[], examples[], refactoring_guidance, status |
 | `entry_tags` | Junction: entries ↔ tags |
 | `entry_relationships` | Graph edges: related_to, extends, contradicts, refactors |
@@ -175,7 +175,8 @@ Add more with: `npx shadcn add <component>`
 ```bash
 npm run dev           # start dev server (Turbopack default in Next.js 16)
 npm run build         # production build
-npm run db:seed       # seed 56 categories (idempotent — safe to re-run)
+npm run db:seed       # seed 35 categories (7 topic parents × 5 children) — idempotent
+npm run db:seed-tags  # seed 10 system tags (TypeScript, Python, React…) — idempotent
 npm run db:generate   # generate SQL migrations from schema changes
 npm run db:migrate    # run migrations (use DATABASE_DIRECT_URL)
 npm run db:studio     # visual DB explorer

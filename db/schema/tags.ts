@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
 export const tags = pgTable('tags', {
   id:          uuid('id').primaryKey().defaultRandom(),
@@ -6,6 +6,7 @@ export const tags = pgTable('tags', {
   slug:        text('slug').notNull().unique(),
   color:       text('color').notNull().default('#6B7280'),
   description: text('description'),
+  isSystem:    boolean('is_system').notNull().default(false),
   createdAt:   timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
