@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth/require-auth'
 import { UserMenu }     from '@/modules/auth/components/UserMenu'
 import { SearchBar }    from '@/modules/search/components/SearchBar'
 import { Separator }    from '@/components/ui/separator'
@@ -16,6 +17,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const appUser = await requireAuth()
 
   return (
     <div className="flex min-h-screen">
@@ -40,6 +43,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
               {label}
             </Link>
           ))}
+          {appUser.role === 'admin' && (
+            <Link
+              href="/admin"
+              className="flex px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Review Queue
+            </Link>
+          )}
         </nav>
         <Separator />
         <div className="flex items-center justify-between p-3">

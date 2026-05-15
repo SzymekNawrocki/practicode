@@ -5,7 +5,7 @@ import { Badge }  from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { EntryStatusBadge } from '@/modules/knowledge/components/EntryStatusBadge'
 import { knowledgeService }  from '@/modules/knowledge/services/knowledge.service'
-import { deleteEntry, publishEntry } from '@/modules/knowledge/actions/knowledge.actions'
+import { deleteEntry, publishEntry, submitForReview } from '@/modules/knowledge/actions/knowledge.actions'
 import { requireAuth } from '@/lib/auth/require-auth'
 import { RelationshipPanel } from '@/modules/knowledge/components/RelationshipPanel'
 
@@ -23,8 +23,10 @@ export default async function EntryDetailPage({ params }: Props) {
     ? await knowledgeService.findSimilar(entry.id, entry.embedding)
     : []
 
-  const canEdit   = currentUser.role === 'admin' || currentUser.role === 'editor'
-  const canDelete = currentUser.role === 'admin'
+  const canEdit            = currentUser.role === 'admin' || currentUser.role === 'editor'
+  const canPublish         = currentUser.role === 'admin' && entry.status !== 'published'
+  const canSubmitForReview = currentUser.role === 'editor' && entry.status === 'draft'
+  const canDelete          = currentUser.role === 'admin'
 
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
@@ -38,7 +40,12 @@ export default async function EntryDetailPage({ params }: Props) {
           <p className="text-muted-foreground">{entry.summary}</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          {canEdit && entry.status !== 'published' && (
+          {canSubmitForReview && (
+            <form action={submitForReview.bind(null, slug)}>
+              <Button variant="outline" size="sm" type="submit">Submit for review</Button>
+            </form>
+          )}
+          {canPublish && (
             <form action={publishEntry.bind(null, slug)}>
               <Button variant="outline" size="sm" type="submit">Publish</Button>
             </form>

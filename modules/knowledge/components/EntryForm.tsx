@@ -11,15 +11,18 @@ import { RichTextEditor } from '@/modules/editor/components/RichTextEditor'
 import { createEntry, updateEntry } from '../actions/knowledge.actions'
 import type { KnowledgeEntryWithRelations } from '../types/knowledge.types'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
-import type { Category } from '@/db/schema'
+import type { Category, Tag } from '@/db/schema'
 import { toSlug } from '@/lib/utils/slug'
+import { cn } from '@/lib/utils'
 
 type Props = {
   entry?:      KnowledgeEntryWithRelations
   categories?: Category[]
+  systemTags?: Tag[]
+  role?:       'admin' | 'editor' | 'viewer'
 }
 
-export function EntryForm({ entry, categories = [] }: Props) {
+export function EntryForm({ entry, categories = [], systemTags = [], role = 'viewer' }: Props) {
   const isEdit = !!entry
 
   const [explanation,         setExplanation]         = useState(entry?.explanation         ?? '')
@@ -29,6 +32,13 @@ export function EntryForm({ entry, categories = [] }: Props) {
   const [relatedConcepts,     setRelatedConcepts]     = useState<string[]>(entry?.relatedConcepts ?? [])
   const [title,               setTitle]               = useState(entry?.title ?? '')
   const [slug,                setSlug]                = useState(entry?.slug  ?? '')
+  const [selectedTagIds,      setSelectedTagIds]      = useState<string[]>(
+    entry?.entryTags?.map(et => et.tag.id) ?? []
+  )
+
+  function toggleTag(id: string) {
+    setSelectedTagIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
 
   const action = isEdit ? updateEntry : createEntry
   const [state, formAction, pending] = useActionState<KnowledgeEntryFormState, FormData>(action, undefined)
@@ -121,6 +131,7 @@ export function EntryForm({ entry, categories = [] }: Props) {
       <input type="hidden" name="bestPractices"       value={JSON.stringify(bestPractices)} />
       <input type="hidden" name="antiPatterns"        value={JSON.stringify(antiPatterns)} />
       <input type="hidden" name="relatedConcepts"     value={JSON.stringify(relatedConcepts)} />
+      <input type="hidden" name="tagIds"              value={JSON.stringify(selectedTagIds)} />
       <input type="hidden" name="slug" value={entry.slug} />
 
       <Tabs defaultValue="basics">
@@ -164,19 +175,24 @@ export function EntryForm({ entry, categories = [] }: Props) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select name="status" defaultValue={entry?.status ?? 'draft'}>
-              <SelectTrigger id="status" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="in_review">In Review</SelectItem>
-                <SelectItem value="published">Published</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {role === 'admin' && (
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select name="status" defaultValue={entry?.status ?? 'draft'}>
+                <SelectTrigger id="status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="in_review">In Review</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {role !== 'admin' && (
+            <input type="hidden" name="status" value={entry?.status ?? 'draft'} />
+          )}
 
           {categories.length > 0 && (
             <div className="space-y-2">
@@ -203,6 +219,29 @@ export function EntryForm({ entry, categories = [] }: Props) {
                     ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {systemTags.length > 0 && (
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2">
+                {systemTags.map(tag => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => toggleTag(tag.id)}
+                    className={cn(
+                      'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                      selectedTagIds.includes(tag.id)
+                        ? 'border-foreground bg-foreground text-background'
+                        : 'border-border bg-transparent text-muted-foreground hover:border-foreground hover:text-foreground'
+                    )}
+                  >
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </TabsContent>

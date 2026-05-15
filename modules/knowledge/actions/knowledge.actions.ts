@@ -88,8 +88,17 @@ export async function deleteEntry(slug: string) {
 }
 
 export async function publishEntry(slug: string) {
-  await requireRole('editor')
+  await requireRole('admin')
   await knowledgeService.update(slug, { status: 'published' })
   revalidatePath('/knowledge')
   revalidatePath(`/knowledge/${slug}`)
+  revalidatePath('/admin')
+}
+
+export async function submitForReview(slug: string) {
+  await requireRole('editor')
+  await knowledgeService.update(slug, { status: 'in_review' })
+  revalidatePath('/knowledge')
+  revalidatePath(`/knowledge/${slug}`)
+  revalidatePath('/admin')
 }
