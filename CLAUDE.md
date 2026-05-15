@@ -19,7 +19,7 @@ AI-assisted software engineering knowledge platform. A structured knowledge base
 | Auth | Supabase SSR (`@supabase/ssr`) |
 | AI | Vercel AI SDK + OpenRouter (`OPENROUTER_API_KEY`) |
 | State | Zustand v5 (ephemeral UI only), React Query v5 (server state in client components) |
-| Search | Drizzle `ilike` MVP → pgvector Phase 3 |
+| Search | Drizzle `ilike` (title + summary) + pgvector cosine similarity (`findSimilar`) |
 
 ---
 
@@ -29,13 +29,24 @@ AI-assisted software engineering knowledge platform. A structured knowledge base
 modules/
   knowledge/    ← core CRUD (entries, tags, categories)
     services/
-      knowledge.service.ts   ← list(opts?), listPublishedByCategory(), getBySlug(), create(), update(), delete(), search()
+      knowledge.service.ts   ← list(opts?), listPublishedByCategory(), getBySlug(), create(), update(), delete(), search(), findSimilar()
       category.service.ts    ← listAll(), listWithChildren(), getBySlug()
     components/
       EntryCard.tsx          ← dashboard card → /knowledge/[slug]
       PublicEntryCard.tsx    ← public card → /entry/[slug] (uses Card component, matches EntryCard structure)
       EntryForm.tsx          ← create/edit form (shadcn Select for status/category, shadcn Input for all text)
   ai/           ← extraction pipeline (OpenRouter → structured draft → human review)
+    services/
+      ai.service.ts          ← streamKnowledgeDraft() (single), streamBatchKnowledgeDraft() (transcript → N entries)
+      embedding.service.ts   ← generateEmbedding(text) via openai/text-embedding-3-small on OpenRouter
+    store/
+      extraction.store.ts      ← single-entry extraction state (Zustand)
+      batch-extraction.store.ts ← batch extraction state — tracks accepted/rejected per entry index
+    components/
+      ExtractionForm.tsx     ← single-entry extraction UI
+      BatchExtractionForm.tsx ← transcript → N draft cards, each accept/dismiss independently
+      BatchDraftCard.tsx     ← per-entry review card used by BatchExtractionForm
+      DraftReviewPanel.tsx   ← single-entry review (save draft / accept)
   editor/       ← Tiptap wrapper components
   auth/         ← Supabase auth actions + client helpers
   search/       ← full-text search
@@ -76,7 +87,8 @@ db/
   schema/       ← Drizzle table definitions (users, knowledge_entries, tags, categories,
                    entry_tags, entry_relationships, ai_drafts)
   migrations/   ← drizzle-kit generated SQL (committed)
-  seed.ts       ← inserts 56 category rows (7 parents × 7 children) — run once
+  seed.ts       ← inserts 35 category rows (7 topic-first parents × 5 children) — idempotent
+  seed-tags.ts  ← inserts 10 system tags — idempotent, safe to re-run
   client.ts     ← singleton drizzle + postgres.js (HMR-safe via globalThis)
 ```
 
@@ -98,8 +110,11 @@ db/
 
 ### Server Actions vs Route Handlers
 - **Server Actions** for all CRUD, auth, search, and export
-- **Route Handlers** only for: AI streaming (`/api/ai/extract`) and Supabase OAuth callback (`/api/auth/callback`)
-- Server Actions cannot return `ReadableStream` — that's the only reason AI extraction is a Route Handler
+- **Route Handlers** only for: AI streaming and Supabase OAuth callback
+  - `POST /api/ai/extract` — single-entry extraction (streams one `KnowledgeEntryDraftSchema` object)
+  - `POST /api/ai/batch-extract` — batch extraction (streams one `BatchKnowledgeExtractionSchema` with `entries[]`)
+  - `GET/POST /api/auth/callback` — Supabase OAuth callback
+- Server Actions cannot return `ReadableStream` — that's the only reason AI extraction uses Route Handlers
 
 ### Database
 - Two connection strings required:
@@ -112,7 +127,11 @@ db/
 - AI output → `ai_drafts` table (status: `pending`)
 - Human accepts → `knowledge_entries` (status: `in_review`) — NEVER `published` directly
 - Human explicitly changes status to `published` — AI never auto-publishes
-- Model: `meta-llama/llama-3.3-70b-instruct` via OpenRouter (swap model by changing one string)
+- Extraction model: `meta-llama/llama-3.3-70b-instruct` via OpenRouter (swap by changing one string in `ai.service.ts`)
+- Embedding model: `openai/text-embedding-3-small` via OpenRouter — 1536 dimensions
+- `acceptDraft()` generates an embedding after creating the entry — fire-and-forget, failure doesn't block the accept
+- `acceptDraft()` accepts `{ redirect: false }` for batch mode (does not navigate away after each accept)
+- Batch mode: `BatchExtractionForm` streams the full JSON blob, then reveals N cards simultaneously — no partial-object rendering
 
 ### Validation
 - Zod on all Server Action inputs and Route Handler request bodies
@@ -141,6 +160,13 @@ db/
 - Custom Tailwind utilities are declared with `@utility` (Tailwind v4 syntax) — **not** `@layer utilities`
 - Tag colours use CSS custom property: `style={{ '--tag-color': tag.color } as React.CSSProperties}` + `className="tag-colored"`
 
+### Classification — categories vs tags
+- **Categories** answer "what kind of concept is this?" — topic-first, 2-level hierarchy, 35 nodes
+- **Tags** answer "what technology is this about?" — system tags are the canonical tech filter
+- System tags (TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL) are seeded with `isSystem = true` and must not be deleted
+- Tech-specific subtrees were intentionally removed from categories — do not add tech parents back; use system tags instead
+- `findSimilar()` uses vector cosine distance (`<=>`) — only returns entries where `embedding IS NOT NULL` and `status = 'published'`
+
 ### UI components
 - Always use shadcn primitives — never raw `<input>`, `<select>`, or `<button>` in UI code
 - `EntryCard` and `PublicEntryCard` share the same Card/CardHeader/CardTitle/CardContent structure
@@ -155,7 +181,7 @@ db/
 | `users` | Mirrors `auth.users.id` from Supabase — role: admin/editor/viewer |
 | `categories` | 2-level hierarchy (self-ref `parent_id`). **35 rows seeded**: 7 topic-first parents (programming-fundamentals, data-structures, web-development, databases, system-design, software-craftsmanship, security) × 5 children each. Child slugs use `{parent}-{child}` pattern (e.g. `system-design-caching`). Drizzle relations require `relationName: 'parent_child'` on both sides of the self-join. Tech-specific classification is handled via system tags, not categories. |
 | `tags` | id, name, slug, color, is_system. System tags (TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL) are seeded via `db:seed-tags` and must not be deleted. |
-| `knowledge_entries` | Core entity — slug, title, summary, problem, explanation, best_practices[], anti_patterns[], examples[], refactoring_guidance, status |
+| `knowledge_entries` | Core entity — slug, title, summary, problem, explanation, best_practices[], anti_patterns[], examples[], refactoring_guidance, status, embedding vector(1536). `embedding` is nullable — populated by `acceptDraft()`, null for manually created entries until next edit. Use `findSimilar()` for cosine-distance queries (`<=>` operator). |
 | `entry_tags` | Junction: entries ↔ tags |
 | `entry_relationships` | Graph edges: related_to, extends, contradicts, refactors |
 | `ai_drafts` | AI extraction staging — raw_input, structured_output (jsonb), status (pending/accepted/rejected/edited) |
