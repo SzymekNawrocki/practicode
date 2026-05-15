@@ -32,6 +32,11 @@ export default async function PublicEntryPage({ params }: Props) {
 
   const moreEntries = moreRaw.filter(e => e.id !== entry.id).slice(0, 3)
 
+  const linkedEntries = [
+    ...entry.outgoingRelationships.map(r => r.target),
+    ...entry.incomingRelationships.map(r => r.source),
+  ].filter(e => e.status === 'published')
+
   const parentCat  = catWithParent?.parent ?? null
   const subCatSlug = catWithParent && parentCat
     ? catWithParent.slug.replace(`${parentCat.slug}-`, '')
@@ -163,26 +168,19 @@ export default async function PublicEntryPage({ params }: Props) {
       )}
 
       {/* See also — linked entries */}
-      {(() => {
-        const linked = [
-          ...(entry.outgoingRelationships ?? []).map((r: any) => r.target),
-          ...(entry.incomingRelationships ?? []).map((r: any) => r.source),
-        ].filter((e: any) => e?.status === 'published')
-        if (linked.length === 0) return null
-        return (
-          <section className="mt-10 border-t pt-8">
-            <h2 className="mb-4 text-base font-semibold">See Also</h2>
-            <div className="flex flex-wrap gap-2">
-              {linked.map((e: any) => (
-                <a key={e.id} href={`/entry/${e.slug}`}
-                   className="border px-3 py-1.5 text-sm hover:bg-muted transition-colors">
-                  {e.title}
-                </a>
-              ))}
-            </div>
-          </section>
-        )
-      })()}
+      {linkedEntries.length > 0 && (
+        <section className="mt-10 border-t pt-8">
+          <h2 className="mb-4 text-base font-semibold">See Also</h2>
+          <div className="flex flex-wrap gap-2">
+            {linkedEntries.map(e => (
+              <a key={e.id} href={`/entry/${e.slug}`}
+                 className="border px-3 py-1.5 text-sm hover:bg-muted transition-colors">
+                {e.title}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* AI-suggested similar entries */}
       {similar.length > 0 && (

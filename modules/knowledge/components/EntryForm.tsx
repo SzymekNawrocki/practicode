@@ -7,7 +7,12 @@ import { Label }    from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { RichTextEditor } from '@/modules/editor/components/RichTextEditor'
+import dynamic from 'next/dynamic'
+
+const RichTextEditor = dynamic(
+  () => import('@/modules/editor/components/RichTextEditor').then(m => m.RichTextEditor),
+  { ssr: false, loading: () => <div className="border border-input h-32 animate-pulse bg-muted" /> }
+)
 import { createEntry, updateEntry } from '../actions/knowledge.actions'
 import type { KnowledgeEntryWithRelations } from '../types/knowledge.types'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'

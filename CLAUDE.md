@@ -207,3 +207,47 @@ npm run db:generate   # generate SQL migrations from schema changes
 npm run db:migrate    # run migrations (use DATABASE_DIRECT_URL)
 npm run db:studio     # visual DB explorer
 ```
+
+---
+
+## Performance & Code Patterns
+
+Rules derived from a Vercel React Best Practices audit. Fix the violation if you see it.
+
+### Auth — no double Supabase call
+`requireAuth()` already calls `createSupabaseServerClient()` + `getUser()` + a DB query. Never add a separate `supabase.auth.getUser()` call before `requireAuth()` — it doubles the round trip on every render.
+
+For redirect-on-unauthenticated in layouts, use:
+```ts
+const appUser = await requireAuth().catch(() => redirect('/login'))
+```
+`redirect()` returns `never`, so TypeScript infers `appUser: AppUser` correctly.
+
+### Bundle — dynamic import for heavy editors
+`RichTextEditor` (Tiptap + lowlight, ~450 KB uncompressed) must always be loaded via `next/dynamic`, never a static import. The dynamic call lives in `EntryForm.tsx`:
+```ts
+const RichTextEditor = dynamic(
+  () => import('@/modules/editor/components/RichTextEditor').then(m => m.RichTextEditor),
+  { ssr: false, loading: () => <div className="border border-input h-32 animate-pulse bg-muted" /> }
+)
+```
+Any other heavy editor or visualisation library added in future must follow the same pattern.
+
+### No IIFEs in JSX
+Never use `{(() => { ... })()}` inside JSX. Compute derived values as local variables above the `return` statement instead:
+```tsx
+// Wrong
+{(() => {
+  const items = list.filter(...)
+  if (!items.length) return null
+  return <Section items={items} />
+})()}
+
+// Right
+const items = list.filter(...)
+// ...
+{items.length > 0 && <Section items={items} />}
+```
+
+### No `any` in component files
+TypeScript strict is enforced. Drizzle infers full relation types from `with` queries — use those types directly. If a type is missing from `knowledge.types.ts`, extend it there rather than casting to `any`.

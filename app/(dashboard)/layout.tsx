@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth/require-auth'
 import { UserMenu }     from '@/modules/auth/components/UserMenu'
 import { SearchBar }    from '@/modules/search/components/SearchBar'
@@ -14,11 +13,7 @@ const navItems = [
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const appUser = await requireAuth()
+  const appUser = await requireAuth().catch(() => redirect('/login'))
 
   return (
     <div className="flex min-h-screen">
@@ -54,7 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </nav>
         <Separator />
         <div className="flex items-center justify-between p-3">
-          <UserMenu email={user.email ?? ''} />
+          <UserMenu email={appUser.email} />
           <ThemeToggle />
         </div>
       </aside>
