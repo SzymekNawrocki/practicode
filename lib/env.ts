@@ -6,6 +6,7 @@ const envSchema = z.object({
   DATABASE_URL:                          z.string().min(1),
   DIRECT_DATABASE_URL:                   z.string().min(1),
   OPENROUTER_API_KEY:                    z.string().min(1),
+  NEXT_PUBLIC_SITE_URL:                  z.string().url().default('https://practicode.dev'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 })
 

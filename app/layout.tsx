@@ -19,6 +19,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PractiCode — Developer Knowledge Base",
   description: "Structured engineering knowledge — best practices, anti-patterns, and design patterns for TypeScript, Python, Next.js, FastAPI, and more.",
+  alternates: {
+    types: {
+      'application/rss+xml': '/feed.xml',
+    },
+  },
 };
 
 export default function RootLayout({
