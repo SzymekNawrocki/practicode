@@ -1,5 +1,10 @@
 import { customType, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
+import { categories } from './categories'
+import { users } from './users'
+import { entryTags } from './tags-junction'
+import { entryRelationships } from './relationships'
+import { entryVersions } from './entry-versions'
 
 const vector = customType<{ data: number[]; config: { dimensions: number }; configRequired: true; driverData: string }>({
   dataType(config) { return `vector(${config.dimensions})` },
@@ -9,10 +14,6 @@ const vector = customType<{ data: number[]; config: { dimensions: number }; conf
     return s.slice(1, -1).split(',').map(Number)
   },
 })
-import { categories } from './categories'
-import { users } from './users'
-import { entryTags } from './tags-junction'
-import { entryRelationships } from './relationships'
 
 export const entryStatusEnum = pgEnum('entry_status', ['draft', 'in_review', 'published'])
 
@@ -47,11 +48,12 @@ export const knowledgeEntries = pgTable('knowledge_entries', {
 ])
 
 export const knowledgeEntriesRelations = relations(knowledgeEntries, ({ one, many }) => ({
-  category:              one(categories, { fields: [knowledgeEntries.categoryId], references: [categories.id] }),
-  author:                one(users,      { fields: [knowledgeEntries.createdBy],  references: [users.id] }),
+  category:              one(categories,     { fields: [knowledgeEntries.categoryId], references: [categories.id] }),
+  author:                one(users,          { fields: [knowledgeEntries.createdBy],  references: [users.id] }),
   entryTags:             many(entryTags),
   outgoingRelationships: many(entryRelationships, { relationName: 'source' }),
   incomingRelationships: many(entryRelationships, { relationName: 'target' }),
+  versions:              many(entryVersions),
 }))
 
 export type KnowledgeEntry       = typeof knowledgeEntries.$inferSelect

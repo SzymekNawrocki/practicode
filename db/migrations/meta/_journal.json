@@ -8,6 +8,27 @@
       "when": 1778703395057,
       "tag": "0000_messy_shocker",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778834715191,
+      "tag": "0001_bumpy_silk_fever",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778836190231,
+      "tag": "0002_jazzy_whizzer",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778839504517,
+      "tag": "0003_opposite_madrox",
+      "breakpoints": true
     }
   ]
 }

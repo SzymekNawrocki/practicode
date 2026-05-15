@@ -1,6 +1,6 @@
 import 'server-only'
 import { db } from '@/db/client'
-import { knowledgeEntries, entryTags, entryRelationships, tags } from '@/db/schema'
+import { knowledgeEntries, entryTags, entryRelationships, tags, entryVersions } from '@/db/schema'
 import { desc, eq, and, isNotNull, sql } from 'drizzle-orm'
 import type { KnowledgeEntryInsert } from '@/db/schema'
 
@@ -141,5 +141,47 @@ export const knowledgeService = {
     if (tagIds.length > 0) {
       await db.insert(entryTags).values(tagIds.map(tagId => ({ entryId, tagId })))
     }
+  },
+
+  async snapshotEntry(entryId: string, savedBy: string) {
+    const entry = await db.query.knowledgeEntries.findFirst({
+      where: eq(knowledgeEntries.id, entryId),
+    })
+    if (!entry) return
+    await db.insert(entryVersions).values({
+      entryId,
+      title:               entry.title,
+      summary:             entry.summary,
+      problem:             entry.problem ?? undefined,
+      explanation:         entry.explanation ?? undefined,
+      bestPractices:       entry.bestPractices,
+      antiPatterns:        entry.antiPatterns,
+      examples:            entry.examples,
+      refactoringGuidance: entry.refactoringGuidance ?? undefined,
+      relatedConcepts:     entry.relatedConcepts,
+      status:              entry.status,
+      categoryId:          entry.categoryId ?? undefined,
+      savedBy,
+    })
+  },
+
+  async listVersions(entryId: string) {
+    return db
+      .select({
+        id:      entryVersions.id,
+        title:   entryVersions.title,
+        summary: entryVersions.summary,
+        status:  entryVersions.status,
+        savedAt: entryVersions.savedAt,
+      })
+      .from(entryVersions)
+      .where(eq(entryVersions.entryId, entryId))
+      .orderBy(sql`${entryVersions.savedAt} desc`)
+  },
+
+  async getVersion(versionId: string) {
+    return db.query.entryVersions.findFirst({
+      where: eq(entryVersions.id, versionId),
+    })
   },
 }

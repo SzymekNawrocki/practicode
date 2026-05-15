@@ -44,9 +44,14 @@ export default async function EntryDetailPage({ params }: Props) {
             </form>
           )}
           {canEdit && (
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/knowledge/${slug}/edit`}>Edit</Link>
-            </Button>
+            <>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/knowledge/${slug}/edit`}>Edit</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href={`/knowledge/${slug}/history`}>History</Link>
+              </Button>
+            </>
           )}
           {canDelete && (
             <form action={deleteEntry.bind(null, slug)}>

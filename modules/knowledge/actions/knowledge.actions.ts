@@ -45,7 +45,7 @@ export async function createEntry(_prev: KnowledgeEntryFormState, formData: Form
 }
 
 export async function updateEntry(_prev: KnowledgeEntryFormState, formData: FormData): Promise<KnowledgeEntryFormState> {
-  await requireRole('editor')
+  const user = await requireRole('editor')
 
   const raw = {
     slug:                formData.get('slug'),
@@ -65,8 +65,16 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
   const parsed = KnowledgeEntryUpdateSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors as Record<string, string[]> }
 
+  const tagIds = (parseJsonField(formData, 'tagIds') as unknown[]).filter(
+    (id): id is string => typeof id === 'string'
+  )
+
   const { slug, ...data } = parsed.data
+  const current = await knowledgeService.getBySlug(slug)
+  if (current) await knowledgeService.snapshotEntry(current.id, user.id)
+
   const entry = await knowledgeService.update(slug, data)
+  await knowledgeService.setTags(entry.id, tagIds)
   revalidatePath('/knowledge')
   revalidatePath(`/knowledge/${entry.slug}`)
   redirect(`/knowledge/${entry.slug}`)
