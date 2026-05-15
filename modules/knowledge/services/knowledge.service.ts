@@ -1,7 +1,7 @@
 import 'server-only'
 import { db } from '@/db/client'
-import { knowledgeEntries, entryTags, entryRelationships } from '@/db/schema'
-import { desc, eq, or, ilike, and, isNotNull, sql } from 'drizzle-orm'
+import { knowledgeEntries, entryTags, entryRelationships, tags } from '@/db/schema'
+import { desc, eq, and, isNotNull, sql } from 'drizzle-orm'
 import type { KnowledgeEntryInsert } from '@/db/schema'
 
 type RelationshipType = 'related_to' | 'extends' | 'contradicts' | 'refactors'
@@ -95,17 +95,51 @@ export const knowledgeService = {
   },
 
   async search(query: string) {
-    const term = `%${query}%`
+    const tsVector = sql`(
+      setweight(to_tsvector('english', coalesce(${knowledgeEntries.title}, '')), 'A') ||
+      setweight(to_tsvector('english', coalesce(${knowledgeEntries.summary}, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(${knowledgeEntries.explanation}, '')), 'C')
+    )`
+    const tsQuery = sql`websearch_to_tsquery('english', ${query})`
     return db.query.knowledgeEntries.findMany({
       where: and(
         eq(knowledgeEntries.status, 'published'),
-        or(
-          ilike(knowledgeEntries.title, term),
-          ilike(knowledgeEntries.summary, term),
-        )
+        sql`${tsVector} @@ ${tsQuery}`
       ),
+      orderBy: [sql`ts_rank(${tsVector}, ${tsQuery}) DESC`],
       limit: 10,
       with: { category: true, entryTags: { with: { tag: true } } },
     })
+  },
+
+  async listSystemTags() {
+    return db.select().from(tags).where(eq(tags.isSystem, true)).orderBy(tags.name)
+  },
+
+  async listTagsWithCount() {
+    return db
+      .select({
+        id:    tags.id,
+        name:  tags.name,
+        slug:  tags.slug,
+        color: tags.color,
+        count: sql<number>`count(distinct ${knowledgeEntries.id})::int`,
+      })
+      .from(tags)
+      .leftJoin(entryTags, eq(entryTags.tagId, tags.id))
+      .leftJoin(knowledgeEntries, and(
+        eq(knowledgeEntries.id, entryTags.entryId),
+        eq(knowledgeEntries.status, 'published'),
+      ))
+      .where(eq(tags.isSystem, true))
+      .groupBy(tags.id, tags.name, tags.slug, tags.color)
+      .orderBy(sql`count(distinct ${knowledgeEntries.id}) desc`)
+  },
+
+  async setTags(entryId: string, tagIds: string[]) {
+    await db.delete(entryTags).where(eq(entryTags.entryId, entryId))
+    if (tagIds.length > 0) {
+      await db.insert(entryTags).values(tagIds.map(tagId => ({ entryId, tagId })))
+    }
   },
 }

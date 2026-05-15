@@ -6,9 +6,13 @@ import { Separator } from '@/components/ui/separator'
 import { PublicHeader } from '@/components/public-header'
 import { PublicFooter } from '@/components/public-footer'
 import { categoryService } from '@/modules/knowledge/services/category.service'
+import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 
 export default async function HomePage() {
-  const categories = await categoryService.listWithChildren()
+  const [categories, tagCounts] = await Promise.all([
+    categoryService.listWithChildren(),
+    knowledgeService.listTagsWithCount(),
+  ])
 
   return (
     <div className="flex min-h-full flex-col">
@@ -28,9 +32,29 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Technology tag cloud */}
+      <section className="mx-auto w-full max-w-6xl px-4 pt-16 pb-8">
+        <h2 className="mb-6 text-xl font-semibold">Browse by Technology</h2>
+        <div className="flex flex-wrap gap-3">
+          {tagCounts.map(tag => (
+            <Link
+              key={tag.id}
+              href={`/search?q=${encodeURIComponent(tag.name)}`}
+              className="flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm transition-colors hover:border-primary/50 hover:text-primary"
+            >
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
+              {tag.name}
+              {tag.count > 0 && (
+                <span className="text-xs text-muted-foreground">{tag.count}</span>
+              )}
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Category grid */}
       <section id="categories" className="mx-auto w-full max-w-6xl px-4 py-16">
-        <h2 className="mb-8 text-xl font-semibold">Browse by Technology</h2>
+        <h2 className="mb-8 text-xl font-semibold">Browse by Topic</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categories.map(cat => (
             <Card key={cat.id} className="transition-all hover:border-primary/50 hover:shadow-sm">
