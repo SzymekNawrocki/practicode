@@ -3,14 +3,8 @@ import { Button } from '@/components/ui/button'
 import { EntryCard } from '@/modules/knowledge/components/EntryCard'
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { categoryService } from '@/modules/knowledge/services/category.service'
+import { requireAuth } from '@/lib/auth/require-auth'
 import { cn } from '@/lib/utils'
-
-const STATUS_TABS = [
-  { label: 'All',        value: ''          },
-  { label: 'Draft',      value: 'draft'     },
-  { label: 'In Review',  value: 'in_review' },
-  { label: 'Published',  value: 'published' },
-] as const
 
 export default async function KnowledgePage({
   searchParams,
@@ -20,16 +14,34 @@ export default async function KnowledgePage({
   const { status, category: categoryId } = await searchParams
   const activeStatus = status ?? ''
 
-  const [all, parentCategories] = await Promise.all([
+  const [all, parentCategories, currentUser] = await Promise.all([
     knowledgeService.list({ limit: 500 }),
     categoryService.listWithChildren(),
+    requireAuth(),
   ])
 
+  const isEditor = currentUser.role === 'editor'
+
+  const statusTabs = isEditor
+    ? [
+        { label: 'All',        value: ''          },
+        { label: 'My Drafts',  value: 'my_drafts' },
+        { label: 'In Review',  value: 'in_review' },
+        { label: 'Published',  value: 'published' },
+      ]
+    : [
+        { label: 'All',        value: ''          },
+        { label: 'Draft',      value: 'draft'     },
+        { label: 'In Review',  value: 'in_review' },
+        { label: 'Published',  value: 'published' },
+      ]
+
   const counts: Record<string, number> = {
-    '':        all.length,
-    draft:     all.filter(e => e.status === 'draft').length,
-    in_review: all.filter(e => e.status === 'in_review').length,
-    published: all.filter(e => e.status === 'published').length,
+    '':         all.length,
+    draft:      all.filter(e => e.status === 'draft').length,
+    in_review:  all.filter(e => e.status === 'in_review').length,
+    published:  all.filter(e => e.status === 'published').length,
+    my_drafts:  all.filter(e => e.status === 'draft' && e.createdBy === currentUser.id).length,
   }
 
   // Collect all child IDs under a selected parent
@@ -42,7 +54,12 @@ export default async function KnowledgePage({
       ? [categoryId]
       : null
 
-  let entries = activeStatus ? all.filter(e => e.status === activeStatus) : all
+  let entries =
+    activeStatus === 'my_drafts'
+      ? all.filter(e => e.status === 'draft' && e.createdBy === currentUser.id)
+      : activeStatus
+        ? all.filter(e => e.status === activeStatus)
+        : all
   if (filterIds) entries = entries.filter(e => e.categoryId && filterIds.includes(e.categoryId))
 
   function buildHref(overrides: { status?: string; category?: string }) {
@@ -66,7 +83,7 @@ export default async function KnowledgePage({
 
       {/* Status tabs */}
       <div className="flex gap-0 border-b">
-        {STATUS_TABS.map(tab => {
+        {statusTabs.map(tab => {
           const isActive = tab.value === activeStatus
           const count = counts[tab.value]
           return (
