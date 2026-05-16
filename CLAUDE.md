@@ -87,8 +87,8 @@ db/
   schema/       ← Drizzle table definitions (users, knowledge_entries, tags, categories,
                    entry_tags, entry_relationships, ai_drafts)
   migrations/   ← drizzle-kit generated SQL (committed)
-  seed.ts       ← inserts 35 category rows (7 topic-first parents × 5 children) — idempotent
-  seed-tags.ts  ← inserts 10 system tags — idempotent, safe to re-run
+  seed.ts       ← deletes all categories then inserts 66 rows (11 AI-era parents × 5 children each)
+  seed-tags.ts  ← upserts 18 system tags — idempotent, safe to re-run
   client.ts     ← singleton drizzle + postgres.js (HMR-safe via globalThis)
 ```
 
@@ -163,9 +163,9 @@ db/
 - Tag colours use CSS custom property: `style={{ '--tag-color': tag.color } as React.CSSProperties}` + `className="tag-colored"`
 
 ### Classification — categories vs tags
-- **Categories** answer "what kind of concept is this?" — topic-first, 2-level hierarchy, 35 nodes
+- **Categories** answer "what kind of concept is this?" — AI-era curriculum, 2-level hierarchy, 66 nodes (11 parents × 5 children). See `CONTEXT.md` for the full taxonomy.
 - **Tags** answer "what technology is this about?" — system tags are the canonical tech filter
-- System tags (TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL) are seeded with `isSystem = true` and must not be deleted
+- System tags (TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL, Redis, Kubernetes, Kafka, LangChain, OpenAI SDK, Anthropic API, AWS, Go) are seeded with `isSystem = true` and must not be deleted
 - Tech-specific subtrees were intentionally removed from categories — do not add tech parents back; use system tags instead
 - `findSimilar()` uses vector cosine distance (`<=>`) — only returns entries where `embedding IS NOT NULL` and `status = 'published'`
 
@@ -181,8 +181,8 @@ db/
 | Table | Purpose |
 |---|---|
 | `users` | Mirrors `auth.users.id` from Supabase — role: admin/editor/viewer |
-| `categories` | 2-level hierarchy (self-ref `parent_id`). **35 rows seeded**: 7 topic-first parents (programming-fundamentals, data-structures, web-development, databases, system-design, software-craftsmanship, security) × 5 children each. Child slugs use `{parent}-{child}` pattern (e.g. `system-design-caching`). Drizzle relations require `relationName: 'parent_child'` on both sides of the self-join. Tech-specific classification is handled via system tags, not categories. |
-| `tags` | id, name, slug, color, is_system. System tags (TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL) are seeded via `db:seed-tags` and must not be deleted. |
+| `categories` | 2-level hierarchy (self-ref `parent_id`). **66 rows seeded**: 11 AI-era parents (programming-fundamentals, system-design, ai-engineering, ai-automation, ai-assisted-dev, backend, cloud-devops, security, product-thinking, soft-skills, frontend-design) × 5 children each. Child slugs use `{parent}-{child}` pattern (e.g. `ai-engineering-rag`). Drizzle relations require `relationName: 'parent_child'` on both sides of the self-join. Tech-specific classification is handled via system tags, not categories. |
+| `tags` | id, name, slug, color, is_system. **18 system tags** seeded via `db:seed-tags` — must not be deleted: TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL, Redis, Kubernetes, Kafka, LangChain, OpenAI SDK, Anthropic API, AWS, Go. |
 | `knowledge_entries` | Core entity — slug, title, summary, problem, explanation, best_practices[], anti_patterns[], examples[], refactoring_guidance, status, embedding vector(1536). `embedding` is nullable — populated by `acceptDraft()`, null for manually created entries until next edit. Use `findSimilar()` for cosine-distance queries (`<=>` operator). |
 | `entry_tags` | Junction: entries ↔ tags |
 | `entry_relationships` | Graph edges: related_to, extends, contradicts, refactors |
@@ -203,8 +203,8 @@ Add more with: `npx shadcn add <component>`
 ```bash
 npm run dev           # start dev server (Turbopack default in Next.js 16)
 npm run build         # production build
-npm run db:seed       # seed 35 categories (7 topic parents × 5 children) — idempotent
-npm run db:seed-tags  # seed 10 system tags (TypeScript, Python, React…) — idempotent
+npm run db:seed       # wipe + reseed 66 categories (11 AI-era parents × 5 children)
+npm run db:seed-tags  # upsert 18 system tags (TypeScript, Redis, LangChain…) — idempotent
 npm run db:generate   # generate SQL migrations from schema changes
 npm run db:migrate    # run migrations (use DATABASE_DIRECT_URL)
 npm run db:studio     # visual DB explorer
