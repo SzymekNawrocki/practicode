@@ -16,6 +16,12 @@ export function PublicHeader() {
           >
             Browse
           </Link>
+          <Link
+            href="/search"
+            className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:block"
+          >
+            Search
+          </Link>
           <ThemeToggle />
           <Button asChild size="sm">
             <Link href="/login">Sign in</Link>
