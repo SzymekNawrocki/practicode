@@ -12,7 +12,15 @@ const SYSTEM_TAGS = [
   { name: 'FastAPI',     slug: 'fastapi',     color: '#009688', description: 'Modern Python web framework for building APIs.' },
   { name: 'Docker',      slug: 'docker',      color: '#2496ED', description: 'Container platform for packaging and deploying applications.' },
   { name: 'PostgreSQL',  slug: 'postgresql',  color: '#336791', description: 'Open-source relational database.' },
-  { name: 'SQL',         slug: 'sql',         color: '#F97316', description: 'Standard language for relational databases.' },
+  { name: 'SQL',          slug: 'sql',          color: '#F97316', description: 'Standard language for relational databases.' },
+  { name: 'Redis',        slug: 'redis',        color: '#DC382D', description: 'In-memory data store for caching, queues, and pub/sub.' },
+  { name: 'Kubernetes',   slug: 'kubernetes',   color: '#326CE5', description: 'Container orchestration platform for automated deployment and scaling.' },
+  { name: 'Kafka',        slug: 'kafka',        color: '#231F20', description: 'Distributed event streaming platform for high-throughput pipelines.' },
+  { name: 'LangChain',    slug: 'langchain',    color: '#1C3C3C', description: 'Framework for building LLM-powered applications and agents.' },
+  { name: 'OpenAI SDK',   slug: 'openai-sdk',   color: '#10A37F', description: 'Client library for OpenAI API — completions, embeddings, and tools.' },
+  { name: 'Anthropic API', slug: 'anthropic-api', color: '#D97757', description: 'Client library for Claude models via the Anthropic API.' },
+  { name: 'AWS',          slug: 'aws',          color: '#FF9900', description: 'Amazon Web Services — the dominant cloud platform.' },
+  { name: 'Go',           slug: 'go',           color: '#00ADD8', description: 'Google\'s compiled language for performant backend and CLI tools.' },
 ]
 
 async function main() {
