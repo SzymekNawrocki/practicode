@@ -10,28 +10,28 @@ import {
 } from '@/components/ui/select'
 
 const LS_KEY       = 'practicode:extractionModel'
-const DEFAULT_MODEL = 'meta-llama/llama-3.3-70b-instruct'
+const DEFAULT_MODEL = 'deepseek/deepseek-v4-flash:free'
 
 const MODELS = [
   {
+    id:    'deepseek/deepseek-v4-flash:free',
+    label: 'DeepSeek V4 Flash (free)',
+    note:  'Recommended — fast, free, supports structured output',
+  },
+  {
+    id:    'google/gemma-4-31b-it:free',
+    label: 'Gemma 4 31B (free)',
+    note:  'Google instruction-tuned, good structured output',
+  },
+  {
+    id:    'google/gemma-4-26b-a4b-it:free',
+    label: 'Gemma 4 26B (free)',
+    note:  'Smaller Gemma variant, faster responses',
+  },
+  {
     id:    'meta-llama/llama-3.3-70b-instruct',
-    label: 'Llama 3.3-70B',
-    note:  'Default — reliable but weaker at structured output',
-  },
-  {
-    id:    'google/gemini-2.0-flash-thinking-exp:free',
-    label: 'Gemini 2.0 Flash Thinking',
-    note:  'Recommended — best instruction-following among free models',
-  },
-  {
-    id:    'deepseek/deepseek-chat:free',
-    label: 'DeepSeek V3',
-    note:  'Strong code generation, good structured output',
-  },
-  {
-    id:    'qwen/qwq-32b:free',
-    label: 'QwQ-32B',
-    note:  'Reasoning model — slow but thorough for complex topics',
+    label: 'Llama 3.3-70B (paid)',
+    note:  'Default fallback — requires OpenRouter credits',
   },
 ]
 

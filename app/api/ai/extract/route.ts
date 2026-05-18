@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { streamKnowledgeDraft } from '@/modules/ai/services/ai.service'
+import { extractKnowledgeDraft }      from '@/modules/ai/services/ai.service'
 
 const RequestSchema = z.object({
   rawText: z.string().min(50).max(50000),
@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
   const parsed = RequestSchema.safeParse(body)
   if (!parsed.success) return Response.json({ error: 'Input must be between 50 and 50,000 characters' }, { status: 400 })
 
-  const result = await streamKnowledgeDraft(parsed.data.rawText)
-  return result.toTextStreamResponse()
+  try {
+    const result = await extractKnowledgeDraft(parsed.data.rawText)
+    return Response.json(result)
+  } catch {
+    return Response.json({ error: 'Extraction failed — all models unavailable. Try again.' }, { status: 503 })
+  }
 }

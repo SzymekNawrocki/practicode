@@ -31,23 +31,12 @@ export function BatchExtractionForm({ categories }: Props) {
       })
 
       if (!response.ok) {
-        const msg = await response.text()
-        setError(msg || 'Extraction failed')
+        const body = await response.json().catch(() => ({}))
+        setError((body as { error?: string }).error || 'Extraction failed')
         return
       }
 
-      const reader  = response.body!.getReader()
-      const decoder = new TextDecoder()
-      let   buffer  = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-      }
-      buffer += decoder.decode()
-
-      const parsed = BatchKnowledgeExtractionSchema.safeParse(JSON.parse(buffer))
+      const parsed = BatchKnowledgeExtractionSchema.safeParse(await response.json())
       if (!parsed.success) {
         setError('AI returned an unexpected structure. Try again.')
         return

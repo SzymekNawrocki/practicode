@@ -12,7 +12,7 @@ type Props = {
 }
 
 export function ExtractionForm({ categories }: Props) {
-  const { status, rawText, streamedJson, draft, error, setRawText, startStreaming, appendToken, setComplete, setError, reset } =
+  const { status, rawText, draft, error, setRawText, startStreaming, setComplete, setError, reset } =
     useExtractionStore()
 
   async function handleExtract() {
@@ -27,25 +27,12 @@ export function ExtractionForm({ categories }: Props) {
       })
 
       if (!response.ok) {
-        const msg = await response.text()
-        setError(msg || 'Extraction failed')
+        const body = await response.json().catch(() => ({}))
+        setError((body as { error?: string }).error || 'Extraction failed')
         return
       }
 
-      const reader  = response.body!.getReader()
-      const decoder = new TextDecoder()
-      let   buffer  = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        const token = decoder.decode(value, { stream: true })
-        buffer += token
-        appendToken(token)
-      }
-      buffer += decoder.decode()
-
-      const parsed = KnowledgeEntryDraftSchema.safeParse(JSON.parse(buffer))
+      const parsed = KnowledgeEntryDraftSchema.safeParse(await response.json())
       if (!parsed.success) {
         setError('AI returned an unexpected structure. Try again.')
         return
@@ -72,14 +59,9 @@ export function ExtractionForm({ categories }: Props) {
       />
 
       {status === 'streaming' && (
-        <div className="border bg-muted/30 p-4">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
-            Extracting knowledge…
-          </div>
-          <pre className="text-xs text-muted-foreground overflow-hidden max-h-32 whitespace-pre-wrap break-all">
-            {streamedJson.slice(-500)}
-          </pre>
+        <div className="border bg-muted/30 p-4 flex items-center gap-3">
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
+          <span className="text-sm text-muted-foreground">Extracting knowledge…</span>
         </div>
       )}
 

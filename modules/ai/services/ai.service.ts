@@ -1,7 +1,9 @@
 import 'server-only'
 import { createOpenAI } from '@ai-sdk/openai'
-import { streamObject }  from 'ai'
+import { generateObject, RetryError, NoObjectGeneratedError } from 'ai'
+import { z } from 'zod'
 import { KnowledgeEntryDraftSchema, BatchKnowledgeExtractionSchema } from '../schemas/ai.schema'
+import type { KnowledgeEntryDraft, BatchKnowledgeExtraction } from '../schemas/ai.schema'
 import { categoryService } from '@/modules/knowledge/services/category.service'
 
 const openrouter = createOpenAI({
@@ -9,7 +11,15 @@ const openrouter = createOpenAI({
   apiKey:  process.env.OPENROUTER_API_KEY!,
 })
 
-const MODEL = 'meta-llama/llama-3.3-70b-instruct'
+const DEFAULT_MODEL = 'meta-llama/llama-3.3-70b-instruct'
+
+// Tried in order when the preferred model fails — all support tool calling
+const FALLBACK_CHAIN = [
+  'deepseek/deepseek-v4-flash:free',
+  'google/gemma-4-31b-it:free',
+  'google/gemma-4-26b-a4b-it:free',
+  DEFAULT_MODEL,
+]
 
 async function buildCategoryBlock(): Promise<string> {
   const cats = await categoryService.listWithChildren()
@@ -33,7 +43,55 @@ CODE EXAMPLES: For any technical concept involving code, APIs, data structures, 
 
 SUGGESTED TAGS: Lowercase keywords like "solid", "clean-code", "refactoring", "typescript".`
 
-export async function streamKnowledgeDraft(rawText: string, model?: string) {
+// Treat provider-level failures as "try the next model".
+// Only let through errors unrelated to model availability (network failures, Zod parse errors, etc.).
+function isModelUnavailable(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false
+  // APICallError: HTTP 4xx/5xx from the provider
+  if ('statusCode' in err) {
+    const status = (err as { statusCode: number }).statusCode
+    return status >= 400 && status < 600
+  }
+  // RetryError: AI SDK exhausted its internal retries against this model
+  if (RetryError.isInstance(err)) return true
+  // NoObjectGeneratedError: model responded but produced no usable structured output
+  if (NoObjectGeneratedError.isInstance(err)) return true
+  return false
+}
+
+async function generateWithFallback<T extends z.ZodTypeAny>(
+  schema: T,
+  system: string,
+  prompt: string,
+  preferred: string,
+  maxTokens: number,
+): Promise<z.infer<T>> {
+  const queue = [preferred, ...FALLBACK_CHAIN.filter((m) => m !== preferred)]
+
+  let lastError: unknown
+  for (const model of queue) {
+    try {
+      const { object } = await generateObject({
+        model:  openrouter.chat(model),
+        schema,
+        system,
+        prompt,
+        maxTokens,
+      })
+      return object as z.infer<T>
+    } catch (err) {
+      if (isModelUnavailable(err)) {
+        console.error(`[ai] model ${model} failed (${(err as { statusCode?: number }).statusCode ?? 'unknown'}), trying next`)
+        lastError = err
+        continue
+      }
+      throw err
+    }
+  }
+  throw lastError ?? new Error('All models in fallback chain failed')
+}
+
+export async function extractKnowledgeDraft(rawText: string, model?: string): Promise<KnowledgeEntryDraft> {
   const categoryBlock = await buildCategoryBlock()
   const system = `You are an expert software engineering educator and knowledge curator.
 Extract structured engineering knowledge from the provided text.
@@ -41,16 +99,10 @@ ${SHARED_CONTENT_RULES}
 
 ${categoryBlock}`
 
-  return streamObject({
-    model:     openrouter(model ?? MODEL),
-    schema:    KnowledgeEntryDraftSchema,
-    system,
-    prompt:    rawText,
-    maxOutputTokens: 6000,
-  })
+  return generateWithFallback(KnowledgeEntryDraftSchema, system, rawText, model ?? DEFAULT_MODEL, 6000)
 }
 
-export async function streamBatchKnowledgeDraft(rawText: string, model?: string) {
+export async function extractBatchKnowledgeDraft(rawText: string, model?: string): Promise<BatchKnowledgeExtraction> {
   const categoryBlock = await buildCategoryBlock()
   const system = `You are an expert software engineering educator and knowledge curator.
 Extract ALL distinct engineering concepts from the provided transcript or article.
@@ -61,11 +113,5 @@ ${SHARED_CONTENT_RULES}
 
 ${categoryBlock}`
 
-  return streamObject({
-    model:     openrouter(model ?? MODEL),
-    schema:    BatchKnowledgeExtractionSchema,
-    system,
-    prompt:    rawText,
-    maxOutputTokens: 16000,
-  })
+  return generateWithFallback(BatchKnowledgeExtractionSchema, system, rawText, model ?? DEFAULT_MODEL, 16000)
 }
