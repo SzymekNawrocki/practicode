@@ -44,9 +44,9 @@ export default async function KnowledgePage({
     my_drafts:  all.filter(e => e.status === 'draft' && e.createdBy === currentUser.id).length,
   }
 
-  // Collect all child IDs under a selected parent
+  // Resolve active parent — works whether a parent or child is selected
   const selectedParent = categoryId
-    ? parentCategories.find(p => p.id === categoryId)
+    ? parentCategories.find(p => p.id === categoryId || p.children.some(c => c.id === categoryId))
     : null
   const filterIds = selectedParent
     ? [selectedParent.id, ...selectedParent.children.map(c => c.id)]
@@ -106,49 +106,59 @@ export default async function KnowledgePage({
         })}
       </div>
 
-      {/* Category filter */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs text-muted-foreground mr-1">Category:</span>
-        <Link
-          href={buildHref({ category: '' })}
-          className={cn(
-            'px-2.5 py-1 text-xs border transition-colors',
-            !categoryId
-              ? 'bg-foreground text-background border-foreground'
-              : 'border-input text-muted-foreground hover:text-foreground hover:border-foreground'
-          )}
-        >
-          All
-        </Link>
-        {parentCategories.map(parent => (
-          <div key={parent.id} className="flex items-center gap-1">
-            <Link
-              href={buildHref({ category: parent.id })}
-              className={cn(
-                'px-2.5 py-1 text-xs border transition-colors',
-                categoryId === parent.id
-                  ? 'bg-foreground text-background border-foreground'
-                  : 'border-input text-muted-foreground hover:text-foreground hover:border-foreground'
-              )}
-            >
-              {parent.name}
-            </Link>
-            {parent.children.map(child => (
+      {/* Category filter — parent row always visible, children revealed on selection */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-xs text-muted-foreground shrink-0">Category:</span>
+          <Link
+            href={buildHref({ category: '' })}
+            className={cn(
+              'px-2.5 py-1 text-xs border transition-colors',
+              !categoryId
+                ? 'bg-foreground text-background border-foreground'
+                : 'border-input text-muted-foreground hover:text-foreground hover:border-foreground'
+            )}
+          >
+            All
+          </Link>
+          {parentCategories.map(parent => {
+            const isActive = categoryId === parent.id || parent.children.some(c => c.id === categoryId)
+            return (
+              <Link
+                key={parent.id}
+                href={buildHref({ category: parent.id })}
+                className={cn(
+                  'px-2.5 py-1 text-xs border transition-colors',
+                  isActive
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'border-input text-muted-foreground hover:text-foreground hover:border-foreground'
+                )}
+              >
+                {parent.name}
+              </Link>
+            )
+          })}
+        </div>
+
+        {selectedParent && selectedParent.children.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 items-center pl-4 py-2 bg-muted/40 border border-border/50">
+            <span className="text-xs text-muted-foreground shrink-0 mr-1">↳ {selectedParent.name}:</span>
+            {selectedParent.children.map(child => (
               <Link
                 key={child.id}
                 href={buildHref({ category: child.id })}
                 className={cn(
-                  'px-2 py-1 text-xs border transition-colors',
+                  'px-2 py-0.5 text-xs border border-dashed transition-colors',
                   categoryId === child.id
-                    ? 'bg-foreground text-background border-foreground'
-                    : 'border-input text-muted-foreground hover:text-foreground hover:border-foreground'
+                    ? 'bg-foreground text-background border-foreground border-solid'
+                    : 'border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-foreground'
                 )}
               >
                 {child.name}
               </Link>
             ))}
           </div>
-        ))}
+        )}
       </div>
 
       {entries.length === 0 ? (
