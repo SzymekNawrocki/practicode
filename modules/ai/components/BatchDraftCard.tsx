@@ -30,12 +30,12 @@ type Props = {
 
 export function BatchDraftCard({ draft, index, accepted, rejected, rawText, categories, onAccepted, onRejected }: Props) {
   const [pending, startTransition] = useTransition()
-  const [categoryId, setCategoryId] = useState<string>('')
+  const [categoryId, setCategoryId] = useState<string>('none')
 
   function handleAccept() {
     startTransition(async () => {
       const { draftId } = await saveDraft(rawText, draft)
-      await acceptDraft(draftId, { redirect: false, categoryId: categoryId || undefined })
+      await acceptDraft(draftId, { redirect: false, categoryId: categoryId === 'none' ? undefined : categoryId })
       onAccepted(index)
     })
   }
@@ -96,7 +96,7 @@ export function BatchDraftCard({ draft, index, accepted, rejected, rawText, cate
                   <SelectValue placeholder="No category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No category</SelectItem>
+                  <SelectItem value="none">No category</SelectItem>
                   {categories.map((parent) => (
                     <SelectGroup key={parent.id}>
                       <SelectLabel>{parent.name}</SelectLabel>

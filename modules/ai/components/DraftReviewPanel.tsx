@@ -26,7 +26,7 @@ type Props = {
 
 export function DraftReviewPanel({ draft, rawText, categories, onReset }: Props) {
   const [pending, startTransition] = useTransition()
-  const [categoryId, setCategoryId] = useState<string>('')
+  const [categoryId, setCategoryId] = useState<string>('none')
 
   function handleSave() {
     startTransition(async () => {
@@ -37,7 +37,7 @@ export function DraftReviewPanel({ draft, rawText, categories, onReset }: Props)
   function handleAccept() {
     startTransition(async () => {
       const { draftId } = await saveDraft(rawText, draft)
-      await acceptDraft(draftId, { categoryId: categoryId || undefined })
+      await acceptDraft(draftId, { categoryId: categoryId === 'none' ? undefined : categoryId })
     })
   }
 
@@ -114,7 +114,7 @@ export function DraftReviewPanel({ draft, rawText, categories, onReset }: Props)
             <SelectValue placeholder="No category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">No category</SelectItem>
+            <SelectItem value="none">No category</SelectItem>
             {categories.map((parent) => (
               <SelectGroup key={parent.id}>
                 <SelectLabel>{parent.name}</SelectLabel>
