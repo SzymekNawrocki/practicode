@@ -20,10 +20,14 @@ export function BatchExtractionForm({ categories }: Props) {
     startStreaming()
 
     try {
+      const model = typeof window !== 'undefined'
+        ? (localStorage.getItem('practicode:extractionModel') ?? undefined)
+        : undefined
+
       const response = await fetch('/api/ai/batch-extract', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ rawText }),
+        body:    JSON.stringify({ rawText, model }),
       })
 
       if (!response.ok) {

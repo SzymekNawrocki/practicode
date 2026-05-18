@@ -5,6 +5,7 @@ import { streamBatchKnowledgeDraft } from '@/modules/ai/services/ai.service'
 
 const RequestSchema = z.object({
   rawText: z.string().min(200).max(100000),
+  model:   z.string().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -16,6 +17,6 @@ export async function POST(request: NextRequest) {
   const parsed = RequestSchema.safeParse(body)
   if (!parsed.success) return Response.json({ error: 'Input must be between 200 and 100,000 characters' }, { status: 400 })
 
-  const result = await streamBatchKnowledgeDraft(parsed.data.rawText)
+  const result = await streamBatchKnowledgeDraft(parsed.data.rawText, parsed.data.model)
   return result.toTextStreamResponse()
 }

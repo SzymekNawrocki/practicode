@@ -4,6 +4,8 @@ import { categories } from '@/db/schema'
 import { eq, isNull, asc } from 'drizzle-orm'
 import type { Category } from '@/db/schema'
 
+export type NewCategory = { name: string; slug: string; parentId: string | null }
+
 export type CategoryWithChildren = Category & { children: Category[] }
 export type CategoryWithParent   = Category & { children: Category[]; parent: Category | null }
 
@@ -29,5 +31,10 @@ export const categoryService = {
       with:  { children: { orderBy: [asc(categories.name)] }, parent: true },
     })
     return row as CategoryWithParent | undefined
+  },
+
+  async create(data: NewCategory): Promise<Category> {
+    const [row] = await db.insert(categories).values(data).returning()
+    return row
   },
 }

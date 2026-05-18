@@ -17,7 +17,7 @@ export const KnowledgeEntryDraftSchema = z.object({
   refactoringGuidance:  z.string().optional(),
   relatedConcepts:      z.array(z.string()).default([]),
   suggestedTags:        z.array(z.string()).default([]),
-  suggestedCategorySlug: z.string().optional(),
+  suggestedCategorySlug: z.string().default(''),
 })
 
 export type KnowledgeEntryDraft = z.infer<typeof KnowledgeEntryDraftSchema>

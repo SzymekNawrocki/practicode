@@ -7,9 +7,10 @@ import { Separator }    from '@/components/ui/separator'
 import { ThemeToggle }  from '@/components/theme-toggle'
 
 const navItems = [
-  { href: '/knowledge', label: 'Knowledge Base' },
-  { href: '/ai/extract', label: 'AI Extract' },
+  { href: '/knowledge',      label: 'Knowledge Base' },
+  { href: '/ai/extract',     label: 'AI Extract' },
   { href: '/skill-generator', label: 'Skill Generator' },
+  { href: '/settings',       label: 'Settings' },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
