@@ -26,7 +26,14 @@ type Props = {
 
 export function DraftReviewPanel({ draft, rawText, categories, onReset }: Props) {
   const [pending, startTransition] = useTransition()
-  const [categoryId, setCategoryId] = useState<string>('none')
+
+  const allChildren    = categories.flatMap((p) => p.children)
+  const suggestedChild = draft.suggestedCategorySlug
+    ? allChildren.find((c) => c.slug === draft.suggestedCategorySlug)
+    : null
+  const isNewCategory  = !!draft.suggestedCategorySlug && !suggestedChild
+
+  const [categoryId, setCategoryId] = useState<string>(suggestedChild?.id ?? 'none')
 
   function handleSave() {
     startTransition(async () => {
@@ -107,24 +114,34 @@ export function DraftReviewPanel({ draft, rawText, categories, onReset }: Props)
 
       <Separator />
 
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground shrink-0">Category</span>
-        <Select value={categoryId} onValueChange={setCategoryId}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="No category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No category</SelectItem>
-            {categories.map((parent) => (
-              <SelectGroup key={parent.id}>
-                <SelectLabel>{parent.name}</SelectLabel>
-                {parent.children.map((child) => (
-                  <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground shrink-0">Category</span>
+          <Select value={categoryId} onValueChange={setCategoryId}>
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="No category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No category</SelectItem>
+              {categories.map((parent) => (
+                <SelectGroup key={parent.id}>
+                  <SelectLabel>{parent.name}</SelectLabel>
+                  {parent.children.map((child) => (
+                    <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
+                  ))}
+                </SelectGroup>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {suggestedChild && (
+          <p className="text-xs text-muted-foreground pl-1">AI suggested · you can change this</p>
+        )}
+        {isNewCategory && (
+          <p className="text-xs text-muted-foreground pl-1">
+            AI suggests a new category: <span className="font-mono">{draft.suggestedCategorySlug}</span> — not in your taxonomy yet
+          </p>
+        )}
       </div>
 
       <div className="flex gap-2 justify-end">

@@ -1,23 +1,36 @@
 import 'server-only'
 import { db } from '@/db/client'
 import { knowledgeEntries, entryTags, entryRelationships, tags, entryVersions } from '@/db/schema'
-import { desc, eq, and, isNotNull, sql } from 'drizzle-orm'
+import { desc, eq, and, isNotNull, inArray, sql } from 'drizzle-orm'
 import type { KnowledgeEntryInsert } from '@/db/schema'
 
 type RelationshipType = 'related_to' | 'extends' | 'contradicts' | 'refactors'
 
 export const knowledgeService = {
-  async list(opts?: { status?: string; categoryId?: string; limit?: number; offset?: number }) {
+  async list(opts?: { status?: string; categoryIds?: string[]; createdBy?: string; limit?: number; offset?: number }) {
     return db.query.knowledgeEntries.findMany({
       where: and(
-        opts?.status     ? eq(knowledgeEntries.status,     opts.status as 'draft' | 'in_review' | 'published') : undefined,
-        opts?.categoryId ? eq(knowledgeEntries.categoryId, opts.categoryId) : undefined,
+        opts?.status               ? eq(knowledgeEntries.status,     opts.status as 'draft' | 'in_review' | 'published') : undefined,
+        opts?.categoryIds?.length  ? inArray(knowledgeEntries.categoryId, opts.categoryIds) : undefined,
+        opts?.createdBy            ? eq(knowledgeEntries.createdBy, opts.createdBy) : undefined,
       ),
       orderBy: [desc(knowledgeEntries.updatedAt)],
       limit:   opts?.limit  ?? 20,
       offset:  opts?.offset ?? 0,
       with:    { category: true, entryTags: { with: { tag: true } } },
     })
+  },
+
+  async count(opts?: { status?: string; categoryIds?: string[]; createdBy?: string }) {
+    const [row] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(knowledgeEntries)
+      .where(and(
+        opts?.status              ? eq(knowledgeEntries.status,     opts.status as 'draft' | 'in_review' | 'published') : undefined,
+        opts?.categoryIds?.length ? inArray(knowledgeEntries.categoryId, opts.categoryIds) : undefined,
+        opts?.createdBy           ? eq(knowledgeEntries.createdBy, opts.createdBy) : undefined,
+      ))
+    return row?.n ?? 0
   },
 
   async listPublishedByCategory(categoryId: string, limit = 12) {

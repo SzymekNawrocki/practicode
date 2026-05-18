@@ -30,7 +30,15 @@ type Props = {
 
 export function BatchDraftCard({ draft, index, accepted, rejected, rawText, categories, onAccepted, onRejected }: Props) {
   const [pending, startTransition] = useTransition()
-  const [categoryId, setCategoryId] = useState<string>('none')
+  const [expanded, setExpanded]    = useState(false)
+
+  const allChildren    = categories.flatMap((p) => p.children)
+  const suggestedChild = draft.suggestedCategorySlug
+    ? allChildren.find((c) => c.slug === draft.suggestedCategorySlug)
+    : null
+  const isNewCategory  = !!draft.suggestedCategorySlug && !suggestedChild
+
+  const [categoryId, setCategoryId] = useState<string>(suggestedChild?.id ?? 'none')
 
   function handleAccept() {
     startTransition(async () => {
@@ -86,27 +94,97 @@ export function BatchDraftCard({ draft, index, accepted, rejected, rawText, cate
             </>
           )}
 
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {expanded ? '▲ Hide details' : '▼ Show details'}
+          </button>
+
+          {expanded && (
+            <div className="space-y-4 pt-1">
+              {draft.problem && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">Problem</p>
+                  <p className="text-sm text-muted-foreground italic">{draft.problem}</p>
+                </div>
+              )}
+
+              {draft.explanation && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">Explanation</p>
+                  <p className="text-sm">{draft.explanation}</p>
+                </div>
+              )}
+
+              {draft.antiPatterns.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">Anti-patterns</p>
+                  <ul className="space-y-1">
+                    {draft.antiPatterns.map((p, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-destructive">
+                        <span className="shrink-0">✗</span>{p}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {draft.examples.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">Code examples</p>
+                  <div className="space-y-3">
+                    {draft.examples.map((ex, i) => (
+                      <div key={i} className="border bg-muted/30">
+                        <div className="px-3 py-1.5 border-b flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground font-mono">{ex.language}</span>
+                          {ex.description && (
+                            <span className="text-xs text-muted-foreground">{ex.description}</span>
+                          )}
+                        </div>
+                        <pre className="text-xs p-3 overflow-x-auto whitespace-pre-wrap">
+                          <code>{ex.code}</code>
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <Separator />
 
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">Category</span>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger className="h-8 text-xs w-52">
-                  <SelectValue placeholder="No category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No category</SelectItem>
-                  {categories.map((parent) => (
-                    <SelectGroup key={parent.id}>
-                      <SelectLabel>{parent.name}</SelectLabel>
-                      {parent.children.map((child) => (
-                        <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground shrink-0">Category</span>
+                <Select value={categoryId} onValueChange={setCategoryId}>
+                  <SelectTrigger className="h-8 text-xs w-52">
+                    <SelectValue placeholder="No category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No category</SelectItem>
+                    {categories.map((parent) => (
+                      <SelectGroup key={parent.id}>
+                        <SelectLabel>{parent.name}</SelectLabel>
+                        {parent.children.map((child) => (
+                          <SelectItem key={child.id} value={child.id}>{child.name}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {suggestedChild && (
+                <p className="text-xs text-muted-foreground">AI suggested · you can change this</p>
+              )}
+              {isNewCategory && (
+                <p className="text-xs text-muted-foreground">
+                  AI suggests new: <span className="font-mono">{draft.suggestedCategorySlug}</span>
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={handleReject} disabled={pending}>

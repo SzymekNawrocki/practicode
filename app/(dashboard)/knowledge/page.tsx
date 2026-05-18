@@ -6,68 +6,82 @@ import { categoryService } from '@/modules/knowledge/services/category.service'
 import { requireAuth } from '@/lib/auth/require-auth'
 import { cn } from '@/lib/utils'
 
+const PAGE_SIZE = 24
+
 export default async function KnowledgePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; category?: string }>
+  searchParams: Promise<{ status?: string; category?: string; page?: string }>
 }) {
-  const { status, category: categoryId } = await searchParams
+  const { status, category: categoryId, page: pageStr } = await searchParams
   const activeStatus = status ?? ''
+  const page         = Math.max(1, parseInt(pageStr ?? '1') || 1)
+  const offset       = (page - 1) * PAGE_SIZE
 
-  const [all, parentCategories, currentUser] = await Promise.all([
-    knowledgeService.list({ limit: 500 }),
-    categoryService.listWithChildren(),
-    requireAuth(),
-  ])
+  const currentUser = await requireAuth()
+
+  const viewStatus    = activeStatus === 'my_drafts' ? 'draft' : (activeStatus || undefined)
+  const viewCreatedBy = activeStatus === 'my_drafts' ? currentUser.id : undefined
 
   const isEditor = currentUser.role === 'editor'
 
-  const statusTabs = isEditor
-    ? [
-        { label: 'All',        value: ''          },
-        { label: 'My Drafts',  value: 'my_drafts' },
-        { label: 'In Review',  value: 'in_review' },
-        { label: 'Published',  value: 'published' },
-      ]
-    : [
-        { label: 'All',        value: ''          },
-        { label: 'Draft',      value: 'draft'     },
-        { label: 'In Review',  value: 'in_review' },
-        { label: 'Published',  value: 'published' },
-      ]
+  const parentCategories = await categoryService.listWithChildren()
 
-  const counts: Record<string, number> = {
-    '':         all.length,
-    draft:      all.filter(e => e.status === 'draft').length,
-    in_review:  all.filter(e => e.status === 'in_review').length,
-    published:  all.filter(e => e.status === 'published').length,
-    my_drafts:  all.filter(e => e.status === 'draft' && e.createdBy === currentUser.id).length,
-  }
-
-  // Resolve active parent — works whether a parent or child is selected
   const selectedParent = categoryId
     ? parentCategories.find(p => p.id === categoryId || p.children.some(c => c.id === categoryId))
     : null
-  const filterIds = selectedParent
+  const filterCategoryIds = selectedParent
     ? [selectedParent.id, ...selectedParent.children.map(c => c.id)]
-    : categoryId
-      ? [categoryId]
-      : null
+    : categoryId ? [categoryId] : undefined
 
-  let entries =
-    activeStatus === 'my_drafts'
-      ? all.filter(e => e.status === 'draft' && e.createdBy === currentUser.id)
-      : activeStatus
-        ? all.filter(e => e.status === activeStatus)
-        : all
-  if (filterIds) entries = entries.filter(e => e.categoryId && filterIds.includes(e.categoryId))
+  const [entries, totalCount, countAll, countDraft, countInReview, countPublished, countMyDrafts] = await Promise.all([
+    knowledgeService.list({
+      status:      viewStatus,
+      categoryIds: filterCategoryIds,
+      createdBy:   viewCreatedBy,
+      limit:       PAGE_SIZE,
+      offset,
+    }),
+    knowledgeService.count({ status: viewStatus, categoryIds: filterCategoryIds, createdBy: viewCreatedBy }),
+    knowledgeService.count({}),
+    knowledgeService.count({ status: 'draft' }),
+    knowledgeService.count({ status: 'in_review' }),
+    knowledgeService.count({ status: 'published' }),
+    knowledgeService.count({ status: 'draft', createdBy: currentUser.id }),
+  ])
 
-  function buildHref(overrides: { status?: string; category?: string }) {
-    const s = overrides.status  ?? activeStatus
-    const c = overrides.category ?? categoryId ?? ''
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+
+  const statusTabs = isEditor
+    ? [
+        { label: 'All',       value: ''          },
+        { label: 'My Drafts', value: 'my_drafts' },
+        { label: 'In Review', value: 'in_review' },
+        { label: 'Published', value: 'published' },
+      ]
+    : [
+        { label: 'All',       value: ''          },
+        { label: 'Draft',     value: 'draft'     },
+        { label: 'In Review', value: 'in_review' },
+        { label: 'Published', value: 'published' },
+      ]
+
+  const counts: Record<string, number> = {
+    '':        countAll,
+    draft:     countDraft,
+    in_review: countInReview,
+    published: countPublished,
+    my_drafts: countMyDrafts,
+  }
+
+  function buildHref(overrides: { status?: string; category?: string; page?: number }) {
+    const s = overrides.status   !== undefined ? overrides.status   : activeStatus
+    const c = overrides.category !== undefined ? overrides.category : (categoryId ?? '')
+    const p = overrides.page     !== undefined ? overrides.page     : 1
     const params = new URLSearchParams()
     if (s) params.set('status', s)
     if (c) params.set('category', c)
+    if (p > 1) params.set('page', String(p))
     const qs = params.toString()
     return `/knowledge${qs ? `?${qs}` : ''}`
   }
@@ -85,7 +99,7 @@ export default async function KnowledgePage({
       <div className="flex gap-0 border-b">
         {statusTabs.map(tab => {
           const isActive = tab.value === activeStatus
-          const count = counts[tab.value]
+          const count    = counts[tab.value]
           return (
             <Link
               key={tab.value}
@@ -106,7 +120,7 @@ export default async function KnowledgePage({
         })}
       </div>
 
-      {/* Category filter — parent row always visible, children revealed on selection */}
+      {/* Category filter */}
       <div className="space-y-2">
         <div className="flex flex-wrap gap-1.5 items-center">
           <span className="text-xs text-muted-foreground shrink-0">Category:</span>
@@ -161,7 +175,7 @@ export default async function KnowledgePage({
         )}
       </div>
 
-      {entries.length === 0 ? (
+      {entries.length === 0 && page === 1 ? (
         <div className="flex flex-col items-center justify-center border border-dashed py-16 text-center">
           <p className="text-sm text-muted-foreground">No entries yet.</p>
           <Button asChild className="mt-4" variant="outline">
@@ -169,11 +183,33 @@ export default async function KnowledgePage({
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {entries.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {entries.map((entry) => (
+              <EntryCard key={entry.id} entry={entry} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm text-muted-foreground">
+                {offset + 1}–{Math.min(offset + PAGE_SIZE, totalCount)} of {totalCount} entries
+              </p>
+              <div className="flex gap-2">
+                {page > 1 && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={buildHref({ page: page - 1 })}>← Previous</Link>
+                  </Button>
+                )}
+                {page < totalPages && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={buildHref({ page: page + 1 })}>Next →</Link>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

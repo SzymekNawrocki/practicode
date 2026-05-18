@@ -14,9 +14,10 @@ export const KnowledgeEntryDraftSchema = z.object({
   bestPractices:       z.array(z.string()).default([]),
   antiPatterns:        z.array(z.string()).default([]),
   examples:            z.array(CodeExampleSchema).default([]),
-  refactoringGuidance: z.string().optional(),
-  relatedConcepts:     z.array(z.string()).default([]),
-  suggestedTags:       z.array(z.string()).default([]),
+  refactoringGuidance:  z.string().optional(),
+  relatedConcepts:      z.array(z.string()).default([]),
+  suggestedTags:        z.array(z.string()).default([]),
+  suggestedCategorySlug: z.string().optional(),
 })
 
 export type KnowledgeEntryDraft = z.infer<typeof KnowledgeEntryDraftSchema>

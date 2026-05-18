@@ -9,7 +9,7 @@ import { ThemeToggle }  from '@/components/theme-toggle'
 const navItems = [
   { href: '/knowledge', label: 'Knowledge Base' },
   { href: '/ai/extract', label: 'AI Extract' },
-  { href: '/skills',     label: 'Context Packs' },
+  { href: '/skill-generator', label: 'Skill Generator' },
 ]
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

@@ -22,10 +22,16 @@ export default async function AIExtractPage() {
         </TabsList>
 
         <TabsContent value="single" className="mt-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            Best for a single snippet, doc page, or StackOverflow answer — extracts one focused concept.
+          </p>
           <ExtractionForm categories={categories} />
         </TabsContent>
 
         <TabsContent value="batch" className="mt-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            Best for a long article, talk transcript, or tutorial — extracts 5–8 distinct concepts at once.
+          </p>
           <BatchExtractionForm categories={categories} />
         </TabsContent>
       </Tabs>

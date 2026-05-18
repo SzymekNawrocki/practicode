@@ -43,6 +43,7 @@ export function ExtractionForm({ categories }: Props) {
         buffer += token
         appendToken(token)
       }
+      buffer += decoder.decode()
 
       const parsed = KnowledgeEntryDraftSchema.safeParse(JSON.parse(buffer))
       if (!parsed.success) {

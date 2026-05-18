@@ -41,6 +41,7 @@ export function BatchExtractionForm({ categories }: Props) {
         if (done) break
         buffer += decoder.decode(value, { stream: true })
       }
+      buffer += decoder.decode()
 
       const parsed = BatchKnowledgeExtractionSchema.safeParse(JSON.parse(buffer))
       if (!parsed.success) {
