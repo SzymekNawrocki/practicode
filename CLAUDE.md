@@ -142,8 +142,16 @@ db/
 - Batch mode: `BatchExtractionForm` waits for the full JSON response, then reveals N cards simultaneously — no streaming, no partial-object rendering
 - AI prompts require at least one code example per entry (synthesised if source has none) and a 3–5 sentence explanation
 
+### Entry Lifecycle
+- Legal status moves: `draft → in_review → published`. Back-moves (`in_review → draft`, `published → in_review/draft`) allowed. `draft → published` one-step is **illegal**.
+- Single source: `modules/knowledge/lifecycle.ts` — `allowedTransitions(from)`, `canTransition(from, to)`, `assertTransition(from, to)`.
+- All Server Actions that mutate status call `assertTransition` before writing. Role checks remain in the actions — lifecycle is role-agnostic.
+- `EntryForm.tsx` drives the status `<Select>` from `allowedTransitions` — only reachable states are rendered.
+- `ENTRY_STATUSES` const in `db/schema/knowledge.ts` drives the pgEnum, the TypeScript union (`EntryStatus`), and `z.enum()` in the schema — one array, no duplication.
+
 ### Validation
 - Zod on all Server Action inputs and Route Handler request bodies
+- `lib/validate.ts` exposes two helpers: `validate(schema, data)` (throws on failure) and `validateForm(schema, data)` (returns `{ ok, data | error }` for form-state actions)
 - `lib/env.ts` validates all env vars at module load time
 - `JSON.parse` from FormData must use the `parseJsonField()` helper in `knowledge.actions.ts` — never raw `JSON.parse`
 
@@ -189,7 +197,7 @@ db/
 | `users` | Mirrors `auth.users.id` from Supabase — role: admin/editor/viewer |
 | `categories` | 2-level hierarchy (self-ref `parent_id`). **66 rows seeded**: 11 AI-era parents (programming-fundamentals, system-design, ai-engineering, ai-automation, ai-assisted-dev, backend, cloud-devops, security, product-thinking, soft-skills, frontend-design) × 5 children each. Child slugs use `{parent}-{child}` pattern (e.g. `ai-engineering-rag`). Drizzle relations require `relationName: 'parent_child'` on both sides of the self-join. Tech-specific classification is handled via system tags, not categories. |
 | `tags` | id, name, slug, color, is_system. **18 system tags** seeded via `db:seed-tags` — must not be deleted: TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL, Redis, Kubernetes, Kafka, LangChain, OpenAI SDK, Anthropic API, AWS, Go. |
-| `knowledge_entries` | Core entity — slug, title, summary, problem, explanation, best_practices[], anti_patterns[], examples[], refactoring_guidance, status, embedding vector(1536). `embedding` is nullable — populated by `acceptDraft()`, null for manually created entries until next edit. Use `findSimilar()` for cosine-distance queries (`<=>` operator). |
+| `knowledge_entries` | Core entity — slug, title, summary, problem, explanation, best_practices[], anti_patterns[], examples[], refactoring_guidance, status, embedding vector(1536). `embedding` is nullable — populated by `indexEntry()` (fire-and-forget) on every `acceptDraft` and `updateEntry`. Null only until the first save. Use `findSimilar()` for cosine-distance queries (`<=>` operator). |
 | `entry_tags` | Junction: entries ↔ tags |
 | `entry_relationships` | Graph edges: related_to, extends, contradicts, refactors |
 | `ai_drafts` | AI extraction staging — raw_input, structured_output (jsonb), status (pending/accepted/rejected/edited) |

@@ -24,7 +24,8 @@ A personal knowledge base for software engineering concepts, powered by AI. Past
 | Database | Supabase (PostgreSQL + pgvector), Drizzle ORM |
 | Auth | Supabase SSR |
 | AI | Vercel AI SDK + OpenRouter |
-| Search | PostgreSQL full-text search (`tsvector`) + pgvector similarity |
+| Search | Drizzle `ilike` (title + summary) + pgvector cosine similarity |
+| Tests | Vitest 3 (pure unit tests — lifecycle, draft promotion, schemas) |
 
 ## Setup
 
@@ -67,8 +68,8 @@ npm run db:migrate
 ### 5. Seed categories and tags
 
 ```bash
-npm run db:seed        # 35 topic-first categories (7 parents × 5 children)
-npm run db:seed-tags   # 10 system tags (TypeScript, Python, React, etc.)
+npm run db:seed        # 66 AI-era categories (11 parents × 5 children)
+npm run db:seed-tags   # 18 system tags (TypeScript, Python, React, Go, etc.)
 ```
 
 ### 6. Set yourself as admin
@@ -92,22 +93,23 @@ Open [http://localhost:3000](http://localhost:3000).
 ```bash
 npm run dev           # start dev server
 npm run build         # production build
+npm run test          # run vitest unit tests
 npm run db:generate   # generate migrations from schema changes
-npm run db:migrate    # apply migrations (uses DIRECT_DATABASE_URL)
-npm run db:seed       # seed categories (idempotent)
-npm run db:seed-tags  # seed system tags (idempotent)
+npm run db:migrate    # apply migrations (uses DATABASE_DIRECT_URL)
+npm run db:seed       # seed categories (wipes and reseeds)
+npm run db:seed-tags  # seed system tags (idempotent upsert)
 npm run db:studio     # visual database explorer
 ```
 
 ## Editorial workflow
 
 ```
-Editor creates entry → draft
-Editor submits for review → in_review
-Admin reviews at /admin → publishes
+Editor creates entry       → draft
+Editor submits for review  → in_review
+Admin reviews at /admin    → published
 ```
 
-AI-extracted entries land in `in_review` automatically and still require admin approval before publishing.
+The `draft → published` one-step shortcut is intentionally blocked — every entry must pass through `in_review`. AI-accepted drafts land directly in `in_review` and still require an admin to publish.
 
 ## Open source
 
