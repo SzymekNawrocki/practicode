@@ -1,10 +1,5 @@
 import { z } from 'zod'
-
-export const CodeExampleSchema = z.object({
-  language:    z.string(),
-  code:        z.string(),
-  description: z.string().optional(),
-})
+import { CodeExampleSchema } from '@/modules/knowledge/schemas/knowledge.schema'
 
 export const KnowledgeEntryDraftSchema = z.object({
   title:               z.string(),

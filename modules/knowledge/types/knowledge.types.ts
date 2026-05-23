@@ -5,4 +5,4 @@ export type KnowledgeEntryWithRelations = KnowledgeEntry & {
   entryTags: Array<{ tag: Tag }>
 }
 
-export type EntryStatus = 'draft' | 'in_review' | 'published'
+export type { EntryStatus } from '@/db/schema'

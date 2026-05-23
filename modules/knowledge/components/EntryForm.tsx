@@ -14,7 +14,9 @@ const RichTextEditor = dynamic(
   { ssr: false, loading: () => <div className="border border-input h-32 animate-pulse bg-muted" /> }
 )
 import { createEntry, updateEntry } from '../actions/knowledge.actions'
+import { allowedTransitions } from '../lifecycle'
 import type { KnowledgeEntryWithRelations } from '../types/knowledge.types'
+import type { EntryStatus } from '@/db/schema'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
 import type { Category, Tag } from '@/db/schema'
 import { toSlug } from '@/lib/utils/slug'
@@ -47,6 +49,16 @@ export function EntryForm({ entry, categories = [], systemTags = [], role = 'vie
 
   const action = isEdit ? updateEntry : createEntry
   const [state, formAction, pending] = useActionState<KnowledgeEntryFormState, FormData>(action, undefined)
+
+  const STATUS_LABELS: Record<EntryStatus, string> = {
+    draft: 'Draft',
+    in_review: 'In Review',
+    published: 'Published',
+  }
+  const currentStatus = (entry?.status ?? 'draft') as EntryStatus
+  const statusOptions: EntryStatus[] = entry
+    ? [currentStatus, ...allowedTransitions(currentStatus)]
+    : ['draft']
 
   function handleTitleChange(value: string) {
     setTitle(value)
@@ -183,14 +195,14 @@ export function EntryForm({ entry, categories = [], systemTags = [], role = 'vie
           {role === 'admin' && (
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select name="status" defaultValue={entry?.status ?? 'draft'}>
+              <Select name="status" defaultValue={currentStatus}>
                 <SelectTrigger id="status" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="in_review">In Review</SelectItem>
-                  <SelectItem value="published">Published</SelectItem>
+                  {statusOptions.map(s => (
+                    <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

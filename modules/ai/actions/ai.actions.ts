@@ -8,8 +8,8 @@ import { aiDrafts, knowledgeEntries } from '@/db/schema'
 import { KnowledgeEntryDraftSchema } from '../schemas/ai.schema'
 import type { KnowledgeEntryDraft } from '../schemas/ai.schema'
 import { eq } from 'drizzle-orm'
-import { toSlug } from '@/lib/utils/slug'
-import { generateEmbedding } from '../services/embedding.service'
+import { promoteDraft, buildDraftSlug, buildEmbeddingText } from '../promote-draft'
+import { indexEntry } from '../services/embedding.service'
 
 export async function saveDraft(rawInput: string, structuredOutput: KnowledgeEntryDraft) {
   const user = await requireRole('editor')
@@ -35,36 +35,20 @@ export async function acceptDraft(draftId: string, opts?: { redirect?: boolean; 
   if (!draft) throw new Error('Draft not found')
 
   const data = draft.structuredOutput as KnowledgeEntryDraft
-  const slug = toSlug(data.title).slice(0, 80) + '-' + Date.now().toString(36)
+  const slug = buildDraftSlug(data.title, Date.now())
 
-  const [entry] = await db.insert(knowledgeEntries).values({
-    slug,
-    title:               data.title,
-    summary:             data.summary,
-    problem:             data.problem,
-    explanation:         data.explanation,
-    bestPractices:       data.bestPractices,
-    antiPatterns:        data.antiPatterns,
-    examples:            data.examples,
-    refactoringGuidance: data.refactoringGuidance,
-    relatedConcepts:     data.relatedConcepts,
-    status:              'in_review',        // NEVER published directly
-    categoryId:          opts?.categoryId ?? null,
-    createdBy:           user.id,
-  }).returning()
+  const [entry] = await db.insert(knowledgeEntries)
+    .values(promoteDraft(data, { slug, createdBy: user.id, categoryId: opts?.categoryId }))
+    .returning()
 
   await db
     .update(aiDrafts)
     .set({ status: 'accepted', entryId: entry.id, reviewedAt: new Date() })
     .where(eq(aiDrafts.id, draftId))
 
-  // Generate embedding asynchronously — failure doesn't block entry creation
-  const embeddingText = [data.title, data.summary, data.problem].filter(Boolean).join(' ')
-  generateEmbedding(embeddingText)
-    .then((embedding) =>
-      db.update(knowledgeEntries).set({ embedding }).where(eq(knowledgeEntries.id, entry.id))
-    )
-    .catch(() => { /* embedding will be generated on next edit */ })
+  void indexEntry(entry.id, buildEmbeddingText(data)).catch(() => {
+    /* embedding deferred to next edit — non-blocking by design */
+  })
 
   revalidatePath('/knowledge')
   if (shouldRedirect) redirect(`/knowledge/${entry.slug}/edit`)

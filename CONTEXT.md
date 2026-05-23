@@ -39,3 +39,11 @@ Status lifecycle: `draft` → `in_review` → `published`. AI never auto-publish
 ## Draft
 
 An AI-extracted knowledge entry awaiting human review. Stored in `ai_drafts` with `status = 'pending'`. A human accepts it (→ creates a `knowledge_entry` at `in_review`) or rejects it. Accepting a draft fires an embedding generation in the background.
+
+## Entry Lifecycle
+
+The legal status transitions for a `knowledge_entry`: `draft → in_review → published`. Back-transitions (`in_review → draft`, `published → in_review`, `published → draft`) are also allowed. The one-step `draft → published` is explicitly forbidden — every entry must pass through human review. The single source of truth for these rules is `modules/knowledge/lifecycle.ts` (`allowedTransitions`, `canTransition`, `assertTransition`). All Server Actions that mutate status call `assertTransition` before writing.
+
+## Draft Promotion
+
+The pure, framework-free transform that converts an AI draft (`KnowledgeEntryDraft`) into a `KnowledgeEntryInsert` row. Lives in `modules/ai/promote-draft.ts` (`promoteDraft`, `buildDraftSlug`, `buildEmbeddingText`). No DB imports — directly unit-testable. `acceptDraft()` is orchestration only: it calls these helpers to build the insert, then delegates embedding generation to `indexEntry()` (fire-and-forget).

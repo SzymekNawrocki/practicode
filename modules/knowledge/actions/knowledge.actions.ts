@@ -6,6 +6,9 @@ import { requireAuth, requireRole } from '@/lib/auth/require-auth'
 import { KnowledgeEntryUpdateSchema, QuickCreateSchema } from '../schemas/knowledge.schema'
 import { knowledgeService } from '../services/knowledge.service'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
+import { assertTransition } from '../lifecycle'
+import { indexEntry } from '@/modules/ai/services/embedding.service'
+import { buildEmbeddingText } from '@/modules/ai/promote-draft'
 
 function extractSummary(html: string | undefined, title: string): string {
   const text = (html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -73,8 +76,15 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
   const current = await knowledgeService.getBySlug(slug)
   if (current) await knowledgeService.snapshotEntry(current.id, user.id)
 
+  if (data.status && current && data.status !== current.status) {
+    assertTransition(current.status, data.status)
+  }
+
   const entry = await knowledgeService.update(slug, data)
   await knowledgeService.setTags(entry.id, tagIds)
+  void indexEntry(entry.id, buildEmbeddingText({
+    title: entry.title, summary: entry.summary, problem: entry.problem,
+  })).catch(() => {})
   revalidatePath('/knowledge')
   revalidatePath(`/knowledge/${entry.slug}`)
   redirect(`/knowledge/${entry.slug}`)
@@ -89,14 +99,18 @@ export async function deleteEntry(slug: string) {
 
 export async function publishEntry(slug: string) {
   await requireRole('admin')
+  const current = await knowledgeService.getBySlug(slug)
+  if (!current) throw new Error('Entry not found')
+  assertTransition(current.status, 'published')
   await knowledgeService.update(slug, { status: 'published' })
-  revalidatePath('/knowledge')
-  revalidatePath(`/knowledge/${slug}`)
-  revalidatePath('/admin')
+  revalidatePath('/knowledge'); revalidatePath(`/knowledge/${slug}`); revalidatePath('/admin')
 }
 
 export async function submitForReview(slug: string) {
   await requireRole('editor')
+  const current = await knowledgeService.getBySlug(slug)
+  if (!current) throw new Error('Entry not found')
+  assertTransition(current.status, 'in_review')
   await knowledgeService.update(slug, { status: 'in_review' })
   revalidatePath('/knowledge')
   revalidatePath(`/knowledge/${slug}`)

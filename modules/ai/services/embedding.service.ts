@@ -1,6 +1,9 @@
 import 'server-only'
 import { createOpenAI } from '@ai-sdk/openai'
 import { embed } from 'ai'
+import { db } from '@/db/client'
+import { knowledgeEntries } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 
 const openrouter = createOpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
@@ -13,4 +16,9 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     value: text,
   })
   return embedding
+}
+
+export async function indexEntry(entryId: string, text: string): Promise<void> {
+  const embedding = await generateEmbedding(text)
+  await db.update(knowledgeEntries).set({ embedding }).where(eq(knowledgeEntries.id, entryId))
 }

@@ -45,7 +45,7 @@ SUGGESTED TAGS: Lowercase keywords like "solid", "clean-code", "refactoring", "t
 
 // Treat provider-level failures as "try the next model".
 // Only let through errors unrelated to model availability (network failures, Zod parse errors, etc.).
-function isModelUnavailable(err: unknown): boolean {
+export function isModelUnavailable(err: unknown): boolean {
   if (typeof err !== 'object' || err === null) return false
   // APICallError: HTTP 4xx/5xx from the provider
   if ('statusCode' in err) {

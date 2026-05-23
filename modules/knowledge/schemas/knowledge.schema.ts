@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ENTRY_STATUSES } from '@/db/schema'
 
 export const SlugSchema = z
   .string()
@@ -23,7 +24,7 @@ export const KnowledgeEntrySchema = z.object({
   examples:            z.array(CodeExampleSchema).default([]),
   refactoringGuidance: z.string().optional(),
   relatedConcepts:     z.array(z.string()).default([]),
-  status:              z.enum(['draft', 'in_review', 'published']).default('draft'),
+  status:              z.enum(ENTRY_STATUSES).default('draft'),
   categoryId:          z.string().uuid().optional(),
 })
 

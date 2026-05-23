@@ -18,7 +18,7 @@ AI-assisted software engineering knowledge platform. A structured knowledge base
 | Validation | Zod v4 |
 | Auth | Supabase SSR (`@supabase/ssr`) |
 | AI | Vercel AI SDK + OpenRouter (`OPENROUTER_API_KEY`) |
-| State | Zustand v5 (ephemeral UI only), React Query v5 (server state in client components) |
+| State | Zustand v5 (ephemeral UI only) |
 | Search | Drizzle `ilike` (title + summary) + pgvector cosine similarity (`findSimilar`) |
 
 ---
@@ -31,14 +31,16 @@ modules/
     services/
       knowledge.service.ts   ← list(opts?), listPublishedByCategory(), getBySlug(), create(), update(), delete(), search(), findSimilar()
       category.service.ts    ← listAll(), listWithChildren(), getBySlug()
+    lifecycle.ts             ← single source for legal status transitions (allowedTransitions, canTransition, assertTransition)
     components/
       EntryCard.tsx          ← dashboard card → /knowledge/[slug]
       PublicEntryCard.tsx    ← public card → /entry/[slug] (uses Card component, matches EntryCard structure)
       EntryForm.tsx          ← create/edit form (shadcn Select for status/category, shadcn Input for all text)
   ai/           ← extraction pipeline (OpenRouter → structured draft → human review)
     services/
-      ai.service.ts          ← streamKnowledgeDraft() (single), streamBatchKnowledgeDraft() (transcript → N entries)
-      embedding.service.ts   ← generateEmbedding(text) via openai/text-embedding-3-small on OpenRouter
+      ai.service.ts          ← extractKnowledgeDraft() (single), extractBatchKnowledgeDraft() (transcript → N entries)
+      embedding.service.ts   ← generateEmbedding(text) + indexEntry(entryId, text) — the embedding seam used by both acceptDraft and updateEntry
+    promote-draft.ts         ← pure Draft → Entry transform (promoteDraft, buildDraftSlug, buildEmbeddingText) — no DB imports, directly unit-testable
     store/
       extraction.store.ts      ← single-entry extraction state (Zustand)
       batch-extraction.store.ts ← batch extraction state — tracks accepted/rejected per entry index
@@ -77,6 +79,7 @@ components/
 
 lib/
   env.ts        ← Zod-validated env (crashes at startup on missing vars)
+  validate.ts   ← validate(schema, data) / validateForm(schema, data) — lightweight Zod parse helpers
   utils/
     slug.ts     ← toSlug(text, suffix?) — shared slug generation utility
   supabase/
@@ -110,11 +113,11 @@ db/
 
 ### Server Actions vs Route Handlers
 - **Server Actions** for all CRUD, auth, search, and export
-- **Route Handlers** only for: AI streaming and Supabase OAuth callback
-  - `POST /api/ai/extract` — single-entry extraction (streams one `KnowledgeEntryDraftSchema` object)
-  - `POST /api/ai/batch-extract` — batch extraction (streams one `BatchKnowledgeExtractionSchema` with `entries[]`)
+- **Route Handlers** only for: AI extraction and Supabase OAuth callback
+  - `POST /api/ai/extract` — single-entry extraction (returns `KnowledgeEntryDraftSchema` as JSON)
+  - `POST /api/ai/batch-extract` — batch extraction (returns `BatchKnowledgeExtractionSchema` with `entries[]` as JSON)
   - `GET/POST /api/auth/callback` — Supabase OAuth callback
-- Server Actions cannot return `ReadableStream` — that's the only reason AI extraction uses Route Handlers
+- AI extraction uses Route Handlers (not Server Actions) because it may need to run for 30–60 s — Server Actions have a shorter timeout and can't signal errors as cleanly mid-flight
 
 ### Database
 - Two connection strings required:
@@ -127,12 +130,16 @@ db/
 - AI output → `ai_drafts` table (status: `pending`)
 - Human accepts → `knowledge_entries` (status: `in_review`) — NEVER `published` directly
 - Human explicitly changes status to `published` — AI never auto-publishes
-- Extraction model: `meta-llama/llama-3.3-70b-instruct` via OpenRouter (swap by changing one string in `ai.service.ts`)
+- Default extraction model: `meta-llama/llama-3.3-70b-instruct` via OpenRouter
+- Fallback chain (tried in order when the preferred model fails): `deepseek/deepseek-v4-flash:free` → `google/gemma-4-31b-it:free` → `google/gemma-4-26b-a4b-it:free` → `meta-llama/llama-3.3-70b-instruct` — all verified to support tool calling (required by `generateObject`)
+- Free models are selected in `/settings` and stored in `localStorage` as `practicode:extractionModel`; default is `deepseek/deepseek-v4-flash:free`
+- `isModelUnavailable()` in `ai.service.ts` catches `APICallError` (HTTP 4xx/5xx), `RetryError`, and `NoObjectGeneratedError` — any other error type is rethrown immediately and skips the fallback chain
 - Embedding model: `openai/text-embedding-3-small` via OpenRouter — 1536 dimensions
-- `acceptDraft()` generates an embedding after creating the entry — fire-and-forget, failure doesn't block the accept
+- `acceptDraft()` calls `indexEntry()` (fire-and-forget) after creating the entry — failure doesn't block the accept
+- `updateEntry()` also calls `indexEntry()` (fire-and-forget) after saving — embedding refreshes on every edit
 - `acceptDraft()` accepts `{ redirect: false }` for batch mode (does not navigate away after each accept)
 - `acceptDraft()` accepts `{ categoryId }` — set by the category dropdown in `DraftReviewPanel` / `BatchDraftCard` at review time
-- Batch mode: `BatchExtractionForm` streams the full JSON blob, then reveals N cards simultaneously — no partial-object rendering
+- Batch mode: `BatchExtractionForm` waits for the full JSON response, then reveals N cards simultaneously — no streaming, no partial-object rendering
 - AI prompts require at least one code example per entry (synthesised if source has none) and a 3–5 sentence explanation
 
 ### Validation
@@ -142,7 +149,6 @@ db/
 
 ### Routing
 - Route groups: `(auth)` for login, `(dashboard)` for protected app, `(public)` for unauthenticated pages
-- `app/(dashboard)/layout.tsx` contains `QueryClientProvider` (Client Component wrapper around Server Component children)
 - `app/(public)/layout.tsx` — `PublicHeader` + `PublicFooter` (both extracted as shared components)
 - `app/page.tsx` — public homepage (outside route groups, renders `PublicHeader` + `PublicFooter` directly)
 - Public routes whitelisted in `proxy.ts`: `/`, `/browse/**`, `/entry/**`, `/search`
@@ -203,6 +209,8 @@ Add more with: `npx shadcn add <component>`
 ```bash
 npm run dev           # start dev server (Turbopack default in Next.js 16)
 npm run build         # production build
+npm run test          # run vitest unit tests
+npm run test:watch    # vitest in watch mode
 npm run db:seed       # wipe + reseed 66 categories (11 AI-era parents × 5 children)
 npm run db:seed-tags  # upsert 18 system tags (TypeScript, Redis, LangChain…) — idempotent
 npm run db:generate   # generate SQL migrations from schema changes

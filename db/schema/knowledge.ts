@@ -15,7 +15,9 @@ const vector = customType<{ data: number[]; config: { dimensions: number }; conf
   },
 })
 
-export const entryStatusEnum = pgEnum('entry_status', ['draft', 'in_review', 'published'])
+export const ENTRY_STATUSES = ['draft', 'in_review', 'published'] as const
+export type EntryStatus = (typeof ENTRY_STATUSES)[number]
+export const entryStatusEnum = pgEnum('entry_status', ENTRY_STATUSES)
 
 export type CodeExample = {
   language:    string
