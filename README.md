@@ -1,33 +1,119 @@
 # PractiCode
 
-A personal knowledge base for software engineering concepts, powered by AI. Paste raw notes, articles, or transcripts — AI structures them into validated entries covering best practices, anti-patterns, and refactoring guidance. Built for individual developers who want to capture and revisit what they learn.
+An AI-assisted software engineering knowledge platform. Engineers paste raw text — transcripts, articles, documentation — and AI extracts structured concepts (best practices, anti-patterns, code examples). Humans validate and publish. The result is a browsable, searchable knowledge base that can also be exported as AI context files for Claude, Copilot, or any coding agent.
+
+![PractiCode homepage](docs/images/homepage.png)
+
+---
 
 ## Features
 
-- **AI extraction** — paste any text and get a structured knowledge entry (problem, explanation, best practices, anti-patterns, examples)
-- **Batch extraction** — paste a long transcript and extract multiple entries at once
-- **Human-in-the-loop** — AI drafts require manual review before publishing; nothing goes live automatically
-- **Public knowledge base** — published entries are browsable without login, with full-text search and category navigation
-- **AI-suggested related entries** — pgvector cosine similarity surfaces similar concepts automatically
-- **Entry relationships** — link entries as `related_to`, `extends`, `contradicts`, or `refactors`
-- **Version history** — every save snapshots the prior state
-- **Context pack export** — select a set of entries and export as `skill.md`, `CLAUDE.md`, or GitHub Copilot instructions for use with AI coding agents
-- **RSS feed** — `/feed.xml` for published entries
-- **Editorial workflow** — editors draft and submit; only admin can publish
+### Public Knowledge Base
 
-## Tech stack
+Anyone can browse and search published engineering concepts — no login required.
+
+- **Homepage** with a hero search bar, a technology tag cloud, and a category grid spanning 66 topics across 11 AI-era disciplines
+- **Browse by category** — two-level hierarchy: parent topic → subcategory → entries
+- **Full-text + vector search** — keyword search combined with pgvector cosine similarity for semantically relevant results
+- **Entry pages** with structured sections: problem, explanation, best practices, anti-patterns, code examples, refactoring guidance, related concepts, AI-suggested similar entries, and "more in this category"
+
+![Public entry page](docs/images/entry-page.png)
+
+---
+
+### AI Extraction Pipeline
+
+Paste raw text and let AI do the heavy lifting. Humans review and approve before anything goes live.
+
+**Single extraction** — best for a focused snippet, StackOverflow answer, or docs page. Extracts one focused concept.
+
+**Batch extraction** — best for a long article or talk transcript. Extracts 5–8 distinct concepts simultaneously, each presented as an independent review card.
+
+![AI extraction — batch mode](docs/images/ai-extraction-batch.png)
+
+The pipeline is intentionally human-in-the-loop:
+
+```
+raw text → AI draft (pending) → human review → in_review → admin publishes → published
+```
+
+AI **never** auto-publishes. Status can move forward or backward (`published → in_review → draft`), but the `draft → published` one-step shortcut is blocked by design.
+
+---
+
+### Knowledge Dashboard
+
+Manage the full lifecycle of entries from a single authenticated view.
+
+- **Status tabs** — All / Draft / In Review / Published (editors see "My Drafts" instead of "Draft")
+- **Category filters** — click a parent category to expand its subcategories inline
+- **Paginated grid** — 24 entries per page with previous / next navigation
+- **New entry form** — Tiptap rich-text editor for explanation and refactoring guidance, shadcn inputs for all other fields
+- **Entry history** — snapshot saved before every update, most-recent-first timeline
+
+![Knowledge dashboard](docs/images/dashboard.png)
+
+---
+
+### Entry Editor
+
+Full rich-text editing with syntax-highlighted code blocks, plus structured fields for every section of an entry: problem statement, best practices list, anti-patterns list, related concepts, tags, and category.
+
+![Entry editor](docs/images/entry-editor.png)
+
+---
+
+### Admin Review Queue
+
+Admins see a dedicated queue of all entries awaiting review. Publish, edit inline, or send back to draft — all from one place.
+
+![Admin review queue](docs/images/admin-review.png)
+
+---
+
+### Skill Generator
+
+Export your published knowledge as AI-ready context files — no manual copy-pasting required.
+
+| Format | Output file | Used with |
+|---|---|---|
+| Claude Context | `CLAUDE.md` | Claude Code project context |
+| Skill Pack | `skill.md` | Per-entry skill files for agents |
+| Copilot Instructions | `copilot-instructions.md` | GitHub Copilot |
+
+Filter by category, cherry-pick individual entries, preview the output in-browser, then download.
+
+![Skill generator](docs/images/skill-generator.png)
+
+---
+
+### Settings
+
+Choose which free OpenRouter model to use for AI extraction. Gemini and DeepSeek generally produce better structured output. Selection persists in `localStorage`.
+
+![Settings page](docs/images/settings.png)
+
+---
+
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 16 (App Router, Server Components) |
+| Framework | Next.js 16.2.6 (App Router, Server Components) |
 | UI | React 19, TypeScript strict, Tailwind CSS v4, shadcn/ui |
-| Database | Supabase (PostgreSQL + pgvector), Drizzle ORM |
-| Auth | Supabase SSR |
-| AI | Vercel AI SDK + OpenRouter |
-| Search | Drizzle `ilike` (title + summary) + pgvector cosine similarity |
-| Tests | Vitest 3 (pure unit tests — lifecycle, draft promotion, schemas) |
+| Theme | `next-themes` — light / dark / system toggle |
+| Editor | Tiptap v3 with syntax-highlighted code blocks |
+| Database | Supabase (PostgreSQL), Drizzle ORM v0.45, postgres.js |
+| Auth | Supabase SSR (`@supabase/ssr`) |
+| AI | Vercel AI SDK + OpenRouter (`OPENROUTER_API_KEY`) |
+| Vector search | pgvector — cosine similarity on `text-embedding-3-small` (1536-dim) embeddings |
+| State | Zustand v5 (ephemeral UI state only) |
+| Validation | Zod v4 on all server boundaries |
+| Tests | Vitest 3 — lifecycle, draft promotion, schema unit tests |
 
-## Setup
+---
+
+## Getting Started
 
 ### Prerequisites
 
@@ -45,13 +131,22 @@ npm install
 
 ### 2. Configure environment variables
 
-```bash
-cp .env.example .env
+Create a `.env.local` file:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+# Two database connections are required
+DATABASE_URL=           # Transaction Pooler (port 6543) — used at runtime
+DATABASE_DIRECT_URL=    # Direct connection  (port 5432) — used by drizzle-kit migrations only
+
+# AI
+OPENROUTER_API_KEY=
 ```
 
-Fill in all values in `.env` — see `.env.example` for descriptions.
-
-### 3. Enable pgvector in Supabase
+### 3. Enable pgvector
 
 In the Supabase SQL editor:
 
@@ -68,13 +163,13 @@ npm run db:migrate
 ### 5. Seed categories and tags
 
 ```bash
-npm run db:seed        # 66 AI-era categories (11 parents × 5 children)
-npm run db:seed-tags   # 18 system tags (TypeScript, Python, React, Go, etc.)
+npm run db:seed        # 66 AI-era categories (11 parents × 5 children each)
+npm run db:seed-tags   # 18 system tags — TypeScript, Python, React, Go, etc. (idempotent)
 ```
 
-### 6. Set yourself as admin
+### 6. Promote yourself to admin
 
-After signing up, promote your account in the Supabase SQL editor:
+After signing up, run in the Supabase SQL editor:
 
 ```sql
 UPDATE users SET role = 'admin' WHERE email = 'your@email.com';
@@ -88,32 +183,58 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+---
+
 ## Scripts
 
 ```bash
-npm run dev           # start dev server
+npm run dev           # start dev server (Turbopack)
 npm run build         # production build
 npm run test          # run vitest unit tests
-npm run db:generate   # generate migrations from schema changes
+npm run test:watch    # vitest in watch mode
+npm run db:generate   # generate SQL migrations from schema changes
 npm run db:migrate    # apply migrations (uses DATABASE_DIRECT_URL)
-npm run db:seed       # seed categories (wipes and reseeds)
-npm run db:seed-tags  # seed system tags (idempotent upsert)
-npm run db:studio     # visual database explorer
+npm run db:seed       # wipe and reseed categories
+npm run db:seed-tags  # upsert system tags
+npm run db:studio     # open Drizzle visual DB explorer
 ```
 
-## Editorial workflow
+---
+
+## Roles
+
+| Role | Permissions |
+|---|---|
+| `viewer` | Browse published entries (public — no login required) |
+| `editor` | Create and edit entries, run AI extraction |
+| `admin` | All of the above + publish from the review queue, delete entries |
+
+---
+
+## Editorial Workflow
 
 ```
-Editor creates entry       → draft
-Editor submits for review  → in_review
-Admin reviews at /admin    → published
+editor creates entry      →  draft
+editor submits            →  in_review
+admin reviews at /admin   →  published
 ```
 
-The `draft → published` one-step shortcut is intentionally blocked — every entry must pass through `in_review`. AI-accepted drafts land directly in `in_review` and still require an admin to publish.
+Back-moves are allowed: `published → in_review`, `in_review → draft`. AI-accepted drafts land in `in_review` and still require an admin to publish. The `draft → published` shortcut is intentionally blocked.
 
-## Open source
+---
 
-This project is currently a personal tool. Open-source release is planned once the core workflow is stable. Watch the repository for updates.
+## AI Models
+
+The default extraction model is `meta-llama/llama-3.3-70b-instruct` via OpenRouter. Free-tier models are available in **Settings**. On failure the pipeline tries each fallback in order:
+
+1. `deepseek/deepseek-v4-flash:free`
+2. `google/gemma-4-31b-it:free`
+3. `google/gemma-4-26b-a4b-it:free`
+4. `meta-llama/llama-3.3-70b-instruct`
+
+All models in the chain support tool calling, which is required for structured (`generateObject`) output.
+
+---
 
 ## License
 
