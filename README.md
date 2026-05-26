@@ -87,14 +87,6 @@ Filter by category, cherry-pick individual entries, preview the output in-browse
 
 ---
 
-### Settings
-
-Choose which free OpenRouter model to use for AI extraction. Gemini and DeepSeek generally produce better structured output. Selection persists in `localStorage`.
-
-![Settings page](docs/images/settings.png)
-
----
-
 ## Tech Stack
 
 | Layer | Technology |
