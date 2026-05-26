@@ -2,10 +2,6 @@
 
 An AI-assisted software engineering knowledge platform. Engineers paste raw text — transcripts, articles, documentation — and AI extracts structured concepts (best practices, anti-patterns, code examples). Humans validate and publish. The result is a browsable, searchable knowledge base that can also be exported as AI context files for Claude, Copilot, or any coding agent.
 
-![PractiCode homepage](docs/images/homepage.png)
-
----
-
 ## Features
 
 ### Public Knowledge Base
