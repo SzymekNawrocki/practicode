@@ -9,23 +9,20 @@ export function PublicHeader() {
         <Link href="/" className="font-semibold tracking-tight text-foreground">
           PractiCode
         </Link>
-        <nav className="flex items-center gap-2">
-          <Link
-            href="/#categories"
-            className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:block"
-          >
-            Browse
-          </Link>
-          <Link
-            href="/search"
-            className="hidden text-sm text-muted-foreground transition-colors hover:text-foreground sm:block"
-          >
-            Search
-          </Link>
-          <ThemeToggle />
-          <Button asChild size="sm">
-            <Link href="/login">Sign in</Link>
+        <nav className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
+            <Link href="/#categories">Browse</Link>
           </Button>
+          <Button asChild variant="ghost" size="sm" className="hidden sm:flex">
+            <Link href="/search">Search</Link>
+          </Button>
+          <div className="mx-2 hidden h-5 w-px bg-border sm:block" />
+          <ThemeToggle />
+          <div className="ml-1">
+            <Button asChild size="sm">
+              <Link href="/login">Sign in</Link>
+            </Button>
+          </div>
         </nav>
       </div>
     </header>
