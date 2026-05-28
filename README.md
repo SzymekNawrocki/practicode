@@ -124,7 +124,7 @@ Create a `.env.local` file:
 ```env
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=   # formerly ANON_KEY — copy from Supabase dashboard
 
 # Two database connections are required
 DATABASE_URL=           # Transaction Pooler (port 6543) — used at runtime
@@ -132,6 +132,17 @@ DATABASE_DIRECT_URL=    # Direct connection  (port 5432) — used by drizzle-kit
 
 # AI
 OPENROUTER_API_KEY=
+
+# Rate limiting (Upstash Redis — free tier)
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+# Error monitoring (Sentry — optional but recommended for production)
+SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_DSN=
+
+# Public site URL (defaults to https://practicode.dev)
+NEXT_PUBLIC_SITE_URL=https://practicode.dev
 ```
 
 ### 3. Enable pgvector

@@ -1,12 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
+import { env } from '@/lib/env'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -27,7 +28,11 @@ export async function proxy(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/browse') ||
     pathname.startsWith('/entry') ||
-    pathname.startsWith('/search')
+    pathname.startsWith('/search') ||
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/terms') ||
+    pathname.startsWith('/cookies') ||
+    pathname.startsWith('/contact')
 
   if (!user && !isLoginPage && !isPublicPath) {
     return NextResponse.redirect(new URL('/login', request.url))

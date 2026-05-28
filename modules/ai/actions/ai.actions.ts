@@ -1,8 +1,9 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect }       from 'next/navigation'
 import { requireRole } from '@/lib/auth/require-auth'
+import log from '@/lib/log'
 import { db } from '@/db/client'
 import { aiDrafts, knowledgeEntries } from '@/db/schema'
 import { KnowledgeEntryDraftSchema } from '../schemas/ai.schema'
@@ -46,11 +47,11 @@ export async function acceptDraft(draftId: string, opts?: { redirect?: boolean; 
     .set({ status: 'accepted', entryId: entry.id, reviewedAt: new Date() })
     .where(eq(aiDrafts.id, draftId))
 
-  void indexEntry(entry.id, buildEmbeddingText(data)).catch(() => {
-    /* embedding deferred to next edit — non-blocking by design */
-  })
+  void indexEntry(entry.id, buildEmbeddingText(data))
+    .catch((err) => log.error({ err, entryId: entry.id }, 'indexEntry failed'))
 
   revalidatePath('/knowledge')
+  revalidateTag('entries', 'default')
   if (shouldRedirect) redirect(`/knowledge/${entry.slug}/edit`)
   return { entrySlug: entry.slug }
 }

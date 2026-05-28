@@ -25,7 +25,16 @@ describe('isModelUnavailable', () => {
   })
 
   it('returns true for NoObjectGeneratedError instance', () => {
-    const err = new NoObjectGeneratedError({ message: 'no object generated' })
+    const err = new NoObjectGeneratedError({
+      message: 'no object generated',
+      response: { id: 'r1', timestamp: new Date(), modelId: 'test' },
+      usage: {
+        inputTokens: 0, outputTokens: 0, totalTokens: 0,
+        inputTokenDetails: { noCacheTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+        outputTokenDetails: { textTokens: 0, reasoningTokens: 0 },
+      },
+      finishReason: 'error',
+    })
     expect(isModelUnavailable(err)).toBe(true)
   })
 

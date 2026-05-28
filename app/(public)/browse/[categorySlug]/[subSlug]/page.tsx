@@ -7,6 +7,8 @@ import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
 
 type Props = { params: Promise<{ categorySlug: string; subSlug: string }> }
 
+export const revalidate = 1800
+
 export async function generateMetadata({ params }: Props) {
   const { categorySlug, subSlug } = await params
   const [parent, sub] = await Promise.all([
@@ -14,9 +16,13 @@ export async function generateMetadata({ params }: Props) {
     categoryService.getBySlug(`${categorySlug}-${subSlug}`),
   ])
   if (!sub) return {}
+  const title = `${sub.name}${parent ? ` · ${parent.name}` : ''}`
+  const description = sub.description ?? `Browse ${sub.name} entries.`
   return {
-    title: `${sub.name}${parent ? ` · ${parent.name}` : ''} — PractiCode`,
-    description: sub.description ?? `Browse ${sub.name} entries.`,
+    title,
+    description,
+    openGraph: { title: `${title} — PractiCode`, description, url: `/browse/${categorySlug}/${subSlug}` },
+    twitter: { card: 'summary' as const, title, description },
   }
 }
 
@@ -35,7 +41,7 @@ export default async function SubcategoryPage({ params }: Props) {
   const entries = await knowledgeService.listPublishedByCategory(sub.id)
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
+    <div id="main-content" className="mx-auto max-w-6xl px-4 py-12">
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>

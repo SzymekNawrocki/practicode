@@ -6,13 +6,18 @@ import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
 
 type Props = { params: Promise<{ categorySlug: string }> }
 
+export const revalidate = 1800
+
 export async function generateMetadata({ params }: Props) {
   const { categorySlug } = await params
   const category = await categoryService.getBySlug(categorySlug)
   if (!category) return {}
+  const description = category.description ?? `Browse ${category.name} engineering knowledge.`
   return {
-    title: `${category.name} — PractiCode`,
-    description: category.description ?? `Browse ${category.name} engineering knowledge.`,
+    title: category.name,
+    description,
+    openGraph: { title: `${category.name} — PractiCode`, description, url: `/browse/${categorySlug}` },
+    twitter: { card: 'summary' as const, title: category.name, description },
   }
 }
 
@@ -25,7 +30,7 @@ export default async function CategoryPage({ params }: Props) {
   const entries = await knowledgeService.listPublishedByCategory(category.id, 6)
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
+    <div id="main-content" className="mx-auto max-w-6xl px-4 py-12">
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>

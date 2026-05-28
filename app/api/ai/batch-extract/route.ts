@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseServerClient }  from '@/lib/supabase/server'
 import { extractBatchKnowledgeDraft }  from '@/modules/ai/services/ai.service'
+import { aiBatchLimiter }              from '@/lib/rate-limit'
 
 const ALLOWED_MODELS = [
   'meta-llama/llama-3.3-70b-instruct',
@@ -19,6 +20,14 @@ export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response('Unauthorized', { status: 401 })
+
+  const { success, reset } = await aiBatchLimiter.limit(user.id)
+  if (!success) {
+    return Response.json(
+      { error: 'Rate limit reached. You can run up to 3 batch extractions per hour.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)) } }
+    )
+  }
 
   const body = await request.json()
   const parsed = RequestSchema.safeParse(body)

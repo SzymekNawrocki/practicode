@@ -8,6 +8,7 @@ import { knowledgeService }  from '@/modules/knowledge/services/knowledge.servic
 import { deleteEntry, publishEntry, submitForReview } from '@/modules/knowledge/actions/knowledge.actions'
 import { requireAuth } from '@/lib/auth/require-auth'
 import { RelationshipPanel } from '@/modules/knowledge/components/RelationshipPanel'
+import { sanitizeHtml } from '@/lib/utils/sanitize-html'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -84,7 +85,7 @@ export default async function EntryDetailPage({ params }: Props) {
           <h2 className="font-semibold">Explanation</h2>
           <div
             className="prose-content"
-            dangerouslySetInnerHTML={{ __html: entry.explanation }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.explanation) }}
           />
         </section>
       )}
@@ -125,7 +126,7 @@ export default async function EntryDetailPage({ params }: Props) {
           <h2 className="font-semibold">Refactoring Guidance</h2>
           <div
             className="prose-content"
-            dangerouslySetInnerHTML={{ __html: entry.refactoringGuidance }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.refactoringGuidance) }}
           />
         </section>
       )}

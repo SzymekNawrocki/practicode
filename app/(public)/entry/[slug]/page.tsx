@@ -4,17 +4,32 @@ import { Badge } from '@/components/ui/badge'
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { categoryService } from '@/modules/knowledge/services/category.service'
 import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
+import { sanitizeHtml } from '@/lib/utils/sanitize-html'
+import { JsonLd } from '@/components/json-ld'
+import { env } from '@/lib/env'
 
 type Props = { params: Promise<{ slug: string }> }
+
+export const revalidate = 1800
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params
   const entry = await knowledgeService.getBySlug(slug)
   if (!entry) return {}
   return {
-    title: `${entry.title} — PractiCode`,
+    title: entry.title,
     description: entry.summary,
-    openGraph: { title: entry.title, description: entry.summary },
+    openGraph: {
+      title: entry.title,
+      description: entry.summary,
+      type: 'article',
+      url: `/entry/${slug}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: entry.title,
+      description: entry.summary,
+    },
   }
 }
 
@@ -42,8 +57,19 @@ export default async function PublicEntryPage({ params }: Props) {
     ? catWithParent.slug.replace(`${parentCat.slug}-`, '')
     : null
 
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: entry.title,
+    description: entry.summary,
+    url: `${env.NEXT_PUBLIC_SITE_URL}/entry/${entry.slug}`,
+    datePublished: entry.createdAt,
+    ...(entry.category && { articleSection: entry.category.name }),
+  }
+
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+    <div id="main-content" className="mx-auto max-w-3xl px-4 py-12">
+      <JsonLd data={articleJsonLd} />
       {/* Breadcrumb */}
       <nav className="mb-6 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>
@@ -91,7 +117,7 @@ export default async function PublicEntryPage({ params }: Props) {
           <h2 className="text-lg font-semibold">Explanation</h2>
           <div
             className="prose-content mt-3"
-            dangerouslySetInnerHTML={{ __html: entry.explanation }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.explanation) }}
           />
         </section>
       )}
@@ -132,7 +158,7 @@ export default async function PublicEntryPage({ params }: Props) {
           <h2 className="text-lg font-semibold">Refactoring Guidance</h2>
           <div
             className="prose-content mt-3"
-            dangerouslySetInnerHTML={{ __html: entry.refactoringGuidance }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(entry.refactoringGuidance) }}
           />
         </section>
       )}

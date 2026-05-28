@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { redirect }       from 'next/navigation'
 import { requireAuth, requireRole } from '@/lib/auth/require-auth'
 import { KnowledgeEntryUpdateSchema, QuickCreateSchema } from '../schemas/knowledge.schema'
@@ -9,6 +9,8 @@ import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
 import { assertTransition } from '../lifecycle'
 import { indexEntry } from '@/modules/ai/services/embedding.service'
 import { buildEmbeddingText } from '@/modules/ai/promote-draft'
+import { sanitizeHtml } from '@/lib/utils/sanitize-html'
+import log from '@/lib/log'
 
 function extractSummary(html: string | undefined, title: string): string {
   const text = (html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -37,13 +39,16 @@ export async function createEntry(_prev: KnowledgeEntryFormState, formData: Form
   const parsed = QuickCreateSchema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors as Record<string, string[]> }
 
+  const explanation = sanitizeHtml(parsed.data.explanation)
   const entry = await knowledgeService.create({
     ...parsed.data,
-    summary:   extractSummary(parsed.data.explanation, parsed.data.title),
+    explanation,
+    summary:   extractSummary(explanation, parsed.data.title),
     status:    'draft',
     createdBy: user.id,
   })
   revalidatePath('/knowledge')
+  revalidateTag('entries', 'default')
   redirect(`/knowledge/${entry.slug}`)
 }
 
@@ -73,6 +78,9 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
   )
 
   const { slug, ...data } = parsed.data
+  if (data.explanation) data.explanation = sanitizeHtml(data.explanation)
+  if (data.refactoringGuidance) data.refactoringGuidance = sanitizeHtml(data.refactoringGuidance)
+
   const current = await knowledgeService.getBySlug(slug)
   if (current) await knowledgeService.snapshotEntry(current.id, user.id)
 
@@ -84,9 +92,11 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
   await knowledgeService.setTags(entry.id, tagIds)
   void indexEntry(entry.id, buildEmbeddingText({
     title: entry.title, summary: entry.summary, problem: entry.problem,
-  })).catch(() => {})
+  })).catch((err) => log.error({ err, entryId: entry.id }, 'indexEntry failed'))
   revalidatePath('/knowledge')
   revalidatePath(`/knowledge/${entry.slug}`)
+  revalidatePath(`/entry/${entry.slug}`)
+  revalidateTag('entries', 'default')
   redirect(`/knowledge/${entry.slug}`)
 }
 
@@ -94,6 +104,7 @@ export async function deleteEntry(slug: string) {
   await requireRole('admin')
   await knowledgeService.delete(slug)
   revalidatePath('/knowledge')
+  revalidateTag('entries', 'default')
   redirect('/knowledge')
 }
 

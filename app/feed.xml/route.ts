@@ -1,7 +1,7 @@
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { env } from '@/lib/env'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 3600
 
 function escapeXml(str: string) {
   return str
@@ -40,9 +40,6 @@ export async function GET() {
 </rss>`
 
   return new Response(xml, {
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
-    },
+    headers: { 'Content-Type': 'application/xml; charset=utf-8' },
   })
 }
