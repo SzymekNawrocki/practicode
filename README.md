@@ -127,8 +127,8 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=   # formerly ANON_KEY — copy from Supabase dashboard
 
 # Two database connections are required
-DATABASE_URL=           # Transaction Pooler (port 6543) — used at runtime
-DATABASE_DIRECT_URL=    # Direct connection  (port 5432) — used by drizzle-kit migrations only
+DATABASE_URL=             # Transaction Pooler (port 6543) — used at runtime
+DIRECT_DATABASE_URL=      # Direct connection  (port 5432) — used by drizzle-kit migrations only
 
 # AI
 OPENROUTER_API_KEY=
