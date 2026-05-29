@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { KnowledgeEntryDraftSchema, BatchKnowledgeExtractionSchema } from '../schemas/ai.schema'
 import type { KnowledgeEntryDraft, BatchKnowledgeExtraction } from '../schemas/ai.schema'
 import { categoryService } from '@/modules/knowledge/services/category.service'
+import log from '@/lib/log'
 
 const openrouter = createOpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
@@ -20,6 +21,8 @@ const FALLBACK_CHAIN = [
   'google/gemma-4-26b-a4b-it:free',
   DEFAULT_MODEL,
 ]
+
+const GENERATION_TIMEOUT_MS = 60_000
 
 async function buildCategoryBlock(): Promise<string> {
   const cats = await categoryService.listWithChildren()
@@ -59,29 +62,34 @@ export function isModelUnavailable(err: unknown): boolean {
   return false
 }
 
+type GenerateResult<T> = { object: T; totalTokens: number; modelUsed: string }
+
 async function generateWithFallback<T extends z.ZodTypeAny>(
   schema: T,
   system: string,
   prompt: string,
   preferred: string,
   maxTokens: number,
-): Promise<z.infer<T>> {
+): Promise<GenerateResult<z.infer<T>>> {
   const queue = [preferred, ...FALLBACK_CHAIN.filter((m) => m !== preferred)]
 
   let lastError: unknown
   for (const model of queue) {
     try {
-      const { object } = await generateObject({
-        model:  openrouter.chat(model),
+      const result = await generateObject({
+        model:       openrouter.chat(model),
         schema,
         system,
         prompt,
         maxTokens,
+        abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
       })
-      return object as z.infer<T>
+      const totalTokens = result.usage?.totalTokens ?? 0
+      log.info({ model, totalTokens }, '[ai] generation succeeded')
+      return { object: result.object as z.infer<T>, totalTokens, modelUsed: model }
     } catch (err) {
       if (isModelUnavailable(err)) {
-        console.error(`[ai] model ${model} failed (${(err as { statusCode?: number }).statusCode ?? 'unknown'}), trying next`)
+        log.warn({ model, status: (err as { statusCode?: number }).statusCode ?? 'unknown' }, '[ai] model failed, trying next')
         lastError = err
         continue
       }
@@ -91,7 +99,9 @@ async function generateWithFallback<T extends z.ZodTypeAny>(
   throw lastError ?? new Error('All models in fallback chain failed')
 }
 
-export async function extractKnowledgeDraft(rawText: string, model?: string): Promise<KnowledgeEntryDraft> {
+export type ExtractionResult<T> = { data: T; totalTokens: number; modelUsed: string }
+
+export async function extractKnowledgeDraft(rawText: string, model?: string): Promise<ExtractionResult<KnowledgeEntryDraft>> {
   const categoryBlock = await buildCategoryBlock()
   const system = `You are an expert software engineering educator and knowledge curator.
 Extract structured engineering knowledge from the provided text.
@@ -99,10 +109,11 @@ ${SHARED_CONTENT_RULES}
 
 ${categoryBlock}`
 
-  return generateWithFallback(KnowledgeEntryDraftSchema, system, rawText, model ?? DEFAULT_MODEL, 6000)
+  const { object, totalTokens, modelUsed } = await generateWithFallback(KnowledgeEntryDraftSchema, system, rawText, model ?? DEFAULT_MODEL, 6000)
+  return { data: object, totalTokens, modelUsed }
 }
 
-export async function extractBatchKnowledgeDraft(rawText: string, model?: string): Promise<BatchKnowledgeExtraction> {
+export async function extractBatchKnowledgeDraft(rawText: string, model?: string): Promise<ExtractionResult<BatchKnowledgeExtraction>> {
   const categoryBlock = await buildCategoryBlock()
   const system = `You are an expert software engineering educator and knowledge curator.
 Extract ALL distinct engineering concepts from the provided transcript or article.
@@ -113,5 +124,6 @@ ${SHARED_CONTENT_RULES}
 
 ${categoryBlock}`
 
-  return generateWithFallback(BatchKnowledgeExtractionSchema, system, rawText, model ?? DEFAULT_MODEL, 16000)
+  const { object, totalTokens, modelUsed } = await generateWithFallback(BatchKnowledgeExtractionSchema, system, rawText, model ?? DEFAULT_MODEL, 16000)
+  return { data: object, totalTokens, modelUsed }
 }

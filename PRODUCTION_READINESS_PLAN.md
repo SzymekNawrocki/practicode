@@ -17,16 +17,24 @@
 | 0.9 CI pipeline | ✓ | `.github/workflows/ci.yml`; `dependabot.yml` |
 | 0.10 Env validation | ✓ | Upstash + Sentry vars in `lib/env.ts`; `proxy.ts` uses validated env |
 
-### Phase 1 — partially done
+### Phase 1 — DONE ✓
 
-| Task | Status |
-|---|---|
-| 1.1 pgvector index | ✓ code — `db/migrations/0005_pgvector_index.sql` (**run manually after embedding backfill**) |
-| 1.2–1.8 | Not yet started |
+| Task | Status | Notes |
+|---|---|---|
+| 1.1 pgvector index | ✓ code | `db/migrations/0005_pgvector_index.sql` — **run manually after embedding backfill** |
+| 1.2 Test coverage | ✓ | 65 tests passing: lifecycle, sanitize-html, requireRole, knowledge actions, ai.service, schemas |
+| 1.3 AI pipeline hardening | ✓ | `AbortSignal.timeout(60_000)` on all `generateObject` calls; `totalTokens` logged + daily token cap (100k/user/day) via Upstash |
+| 1.4 PWA basics | ✓ | `app/manifest.ts`, `app/icon.tsx`, `app/apple-icon.tsx`, icon-192/512 routes |
+| 1.5 Vercel Analytics + Speed Insights | ✓ | `@vercel/analytics` + `@vercel/speed-insights` installed; `ConditionalAnalytics` component gates on cookie consent |
+| 1.6 Accessibility | ✓ | ThemeToggle, burger, nav all have correct aria-labels; mobile `<nav>` wrapper in place |
+| 1.7 Error UX | ✓ | `app/not-found.tsx` — branded 404 with search bar + top category links |
+| 1.8 Operational docs | ✓ | `docs/runbook.md`, `docs/backups.md` |
 
 ---
 
 ## Manual Steps Before Launch
+
+> Full step-by-step instructions with verification commands are in **`LAUNCH_CHECKLIST.md`** in the project root.
 
 ### 1. Run RLS migration against Supabase
 

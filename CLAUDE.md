@@ -38,7 +38,7 @@ modules/
       EntryForm.tsx          ← create/edit form (shadcn Select for status/category, shadcn Input for all text)
   ai/           ← extraction pipeline (OpenRouter → structured draft → human review)
     services/
-      ai.service.ts          ← extractKnowledgeDraft() (single), extractBatchKnowledgeDraft() (transcript → N entries)
+      ai.service.ts          ← extractKnowledgeDraft() → ExtractionResult<KnowledgeEntryDraft>, extractBatchKnowledgeDraft() → ExtractionResult<BatchKnowledgeExtraction>; ExtractionResult = { data, totalTokens, modelUsed }
       embedding.service.ts   ← generateEmbedding(text) + indexEntry(entryId, text) — the embedding seam used by both acceptDraft and updateEntry
     promote-draft.ts         ← pure Draft → Entry transform (promoteDraft, buildDraftSlug, buildEmbeddingText) — no DB imports, directly unit-testable
     store/
@@ -56,15 +56,22 @@ modules/
 
 app/
   page.tsx              ← public homepage (hero + category grid + search)
+  not-found.tsx         ← global 404 — branded, inline search + top-category quick links
+  manifest.ts           ← PWA Web App Manifest
+  icon.tsx              ← 32×32 favicon (ImageResponse)
+  apple-icon.tsx        ← 180×180 Apple touch icon (ImageResponse)
+  icon-192/route.tsx    ← 192×192 PWA icon (ImageResponse, referenced by manifest)
+  icon-512/route.tsx    ← 512×512 PWA icon (ImageResponse, referenced by manifest)
   (public)/             ← no auth required
     layout.tsx          ← PublicHeader + PublicFooter
-    error.tsx           ← error boundary (client component, reset button)
+    error.tsx           ← error boundary (client component, reset button + Sentry capture)
     browse/[categorySlug]/page.tsx        ← has generateMetadata, loading.tsx
     browse/[categorySlug]/[subSlug]/page.tsx  ← has generateMetadata, loading.tsx
     entry/[slug]/page.tsx                 ← has generateMetadata, loading.tsx, not-found.tsx
+    entry/[slug]/opengraph-image.tsx      ← dynamic 1200×630 OG image (title + category + summary)
     search/page.tsx                       ← loading.tsx
   (dashboard)/          ← auth required (layout redirects unauthenticated → /login)
-    error.tsx           ← error boundary
+    error.tsx           ← error boundary (Sentry capture)
     knowledge/          ← list, new, [slug], [slug]/edit — each has loading.tsx; [slug] has not-found.tsx
     ai/extract/
     skills/
@@ -72,19 +79,29 @@ app/
 
 components/
   public-header.tsx     ← shared header (public layout + homepage); includes ThemeToggle
-  public-footer.tsx     ← shared footer (public layout + homepage)
+  public-footer.tsx     ← shared footer (public layout + homepage); links to Privacy/Terms/Cookies/Contact/RSS
   theme-provider.tsx    ← next-themes ThemeProvider wrapper
   theme-toggle.tsx      ← ☀/☾/◑ button cycling light → dark → system
+  analytics.tsx         ← ConditionalAnalytics — renders Vercel Analytics + Speed Insights only when cookie consent = 'accepted'
+  cookie-consent.tsx    ← GDPR cookie banner; persists choice in localStorage as 'practicode:cookie-consent'
+  json-ld.tsx           ← renders <script type="application/ld+json"> for structured data
   ui/                   ← shadcn components
 
 lib/
   env.ts        ← Zod-validated env (crashes at startup on missing vars)
+  log.ts        ← pino structured logger (server-only) — use instead of console.error in server code
+  rate-limit.ts ← Upstash rate limiters (aiExtractLimiter, aiBatchLimiter, authLimiter) + daily token cap helpers
   validate.ts   ← validate(schema, data) / validateForm(schema, data) — lightweight Zod parse helpers
   utils/
-    slug.ts     ← toSlug(text, suffix?) — shared slug generation utility
+    slug.ts         ← toSlug(text, suffix?) — shared slug generation utility
+    sanitize-html.ts ← sanitizeHtml(html) — DOMPurify wrapper; call on save AND on render for Tiptap HTML
   supabase/
     server.ts   ← createSupabaseServerClient() — ALWAYS await cookies()
     client.ts   ← createSupabaseBrowserClient()
+
+docs/
+  runbook.md    ← ops runbook: health check, secret rotation, Sentry triage, disable AI in incident
+  backups.md    ← backup strategy, PITR requirements, GDPR data export/deletion
 
 db/
   schema/       ← Drizzle table definitions (users, knowledge_entries, tags, categories,
@@ -134,6 +151,9 @@ db/
 - Fallback chain (tried in order when the preferred model fails): `deepseek/deepseek-v4-flash:free` → `google/gemma-4-31b-it:free` → `google/gemma-4-26b-a4b-it:free` → `meta-llama/llama-3.3-70b-instruct` — all verified to support tool calling (required by `generateObject`)
 - Free models are selected in `/settings` and stored in `localStorage` as `practicode:extractionModel`; default is `deepseek/deepseek-v4-flash:free`
 - `isModelUnavailable()` in `ai.service.ts` catches `APICallError` (HTTP 4xx/5xx), `RetryError`, and `NoObjectGeneratedError` — any other error type is rethrown immediately and skips the fallback chain
+- Every `generateObject` call has `abortSignal: AbortSignal.timeout(60_000)` — prevents runaway requests
+- `extractKnowledgeDraft()` and `extractBatchKnowledgeDraft()` return `ExtractionResult<T>` = `{ data, totalTokens, modelUsed }` — route handlers log tokens via pino and increment the Upstash daily counter
+- Per-user daily token cap: 100k tokens/day via `isDailyTokenLimitExceeded()` / `incrementDailyTokens()` in `lib/rate-limit.ts` — checked before each extraction
 - Embedding model: `openai/text-embedding-3-small` via OpenRouter — 1536 dimensions
 - `acceptDraft()` calls `indexEntry()` (fire-and-forget) after creating the entry — failure doesn't block the accept
 - `updateEntry()` also calls `indexEntry()` (fire-and-forget) after saving — embedding refreshes on every edit
@@ -177,7 +197,7 @@ db/
 - Tag colours use CSS custom property: `style={{ '--tag-color': tag.color } as React.CSSProperties}` + `className="tag-colored"`
 
 ### Classification — categories vs tags
-- **Categories** answer "what kind of concept is this?" — AI-era curriculum, 2-level hierarchy, 66 nodes (11 parents × 5 children). See `CONTEXT.md` for the full taxonomy.
+- **Categories** answer "what kind of concept is this?" — AI-era curriculum, 2-level hierarchy, 66 nodes (11 parents × 5 children). 11 parents: programming-fundamentals, system-design, ai-engineering, ai-automation, ai-assisted-dev, backend, cloud-devops, security, product-thinking, soft-skills, frontend-design.
 - **Tags** answer "what technology is this about?" — system tags are the canonical tech filter
 - System tags (TypeScript, JavaScript, Python, React, Next.js, Node.js, FastAPI, Docker, PostgreSQL, SQL, Redis, Kubernetes, Kafka, LangChain, OpenAI SDK, Anthropic API, AWS, Go) are seeded with `isSystem = true` and must not be deleted
 - Tech-specific subtrees were intentionally removed from categories — do not add tech parents back; use system tags instead
@@ -225,6 +245,32 @@ npm run db:generate   # generate SQL migrations from schema changes
 npm run db:migrate    # run migrations (use DATABASE_DIRECT_URL)
 npm run db:studio     # visual DB explorer
 ```
+
+---
+
+## Security & Observability
+
+### XSS — sanitize Tiptap HTML everywhere
+`sanitizeHtml()` from `lib/utils/sanitize-html.ts` must be called:
+- **On save** in Server Actions (`createEntry`, `updateEntry`) before writing to DB
+- **On render** with `dangerouslySetInnerHTML` in entry detail pages
+- Never skip either layer — defence-in-depth.
+
+### Rate limiting
+`lib/rate-limit.ts` exports:
+- `aiExtractLimiter` — 10 req/hr per user (single extraction)
+- `aiBatchLimiter` — 3 req/hr per user (batch extraction)
+- `authLimiter` — 5 req / 15 min per IP (login)
+- `isDailyTokenLimitExceeded(userId)` — checks Upstash counter
+- `incrementDailyTokens(userId, n)` — increments counter (fire-and-forget after extraction)
+
+Requires `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` in env. Without them, the app starts but rate limiting silently fails (dev-safe defaults in `lib/env.ts`).
+
+### Structured logging
+Use `log` from `lib/log.ts` (pino, server-only) instead of `console.error` in server code. Log shape: `log.info({ userId, model, totalTokens, endpoint }, 'message')` — keeps AI cost tracking queryable.
+
+### RLS
+All Supabase tables have RLS enabled (`db/migrations/0004_enable_rls.sql`). Read-side filters in service functions are defence-in-depth — RLS is the security boundary. Service-role connection (Drizzle via `DATABASE_URL`) bypasses RLS for server writes.
 
 ---
 

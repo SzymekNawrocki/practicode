@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { extractKnowledgeDraft }      from '@/modules/ai/services/ai.service'
-import { aiExtractLimiter }           from '@/lib/rate-limit'
+import { aiExtractLimiter, isDailyTokenLimitExceeded, incrementDailyTokens } from '@/lib/rate-limit'
+import log from '@/lib/log'
 
 const RequestSchema = z.object({
   rawText: z.string().min(50).max(50000),
@@ -21,13 +22,22 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  if (await isDailyTokenLimitExceeded(user.id)) {
+    return Response.json(
+      { error: 'Daily token limit reached (100k tokens/day). Try again tomorrow.' },
+      { status: 429 }
+    )
+  }
+
   const body = await request.json()
   const parsed = RequestSchema.safeParse(body)
   if (!parsed.success) return Response.json({ error: 'Input must be between 50 and 50,000 characters' }, { status: 400 })
 
   try {
-    const result = await extractKnowledgeDraft(parsed.data.rawText)
-    return Response.json(result)
+    const { data, totalTokens, modelUsed } = await extractKnowledgeDraft(parsed.data.rawText)
+    log.info({ userId: user.id, model: modelUsed, totalTokens, endpoint: 'extract' }, '[ai] extraction complete')
+    void incrementDailyTokens(user.id, totalTokens)
+    return Response.json(data)
   } catch {
     return Response.json({ error: 'Extraction failed — all models unavailable. Try again.' }, { status: 503 })
   }
