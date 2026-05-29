@@ -8,10 +8,10 @@
 |---|---|---|
 | 0.1 XSS sanitization | ✓ | `lib/utils/sanitize-html.ts`; sanitise on save + render |
 | 0.2 Supabase RLS | ✓ code | SQL in `db/migrations/0004_enable_rls.sql` — **run manually** (see below) |
-| 0.3 Rate limiting | ✓ code | `lib/rate-limit.ts` wired into both AI routes — **add Upstash env vars** (see below) |
-| 0.4 HTTP security headers | ✓ | `next.config.ts`; CSP in report-only — **flip to enforce after monitoring** |
-| 0.5 Observability | ✓ code | pino `lib/log.ts`, Sentry configs, `/api/health` — **add Sentry DSN** (see below) |
-| 0.6 SEO | ✓ | sitemap, robots, OG/Twitter metadata, JSON-LD, skip link |
+| 0.3 Rate limiting | ✓ code | `lib/rate-limit.ts` wired into AI routes + login (`authLimiter` 5 req/15 min per IP) — **add Upstash env vars** (see below) |
+| 0.4 HTTP security headers | ✓ | `next.config.ts` + `withSentryConfig`; CSP in report-only — **flip to enforce after monitoring** |
+| 0.5 Observability | ✓ code | pino `lib/log.ts`, Sentry configs + `withSentryConfig` wrapper, `/api/health` — **add Sentry DSN + SENTRY_AUTH_TOKEN** (see below) |
+| 0.6 SEO | ✓ | sitemap, robots, OG/Twitter metadata, Article + BreadcrumbList JSON-LD, skip link, dynamic OG image for entries |
 | 0.7 ISR caching | ✓ | `revalidate = 1800` on all public routes; `revalidateTag` on mutations |
 | 0.8 Legal & consent | ✓ | `/privacy`, `/terms`, `/cookies`, `/contact`; cookie consent banner |
 | 0.9 CI pipeline | ✓ | `.github/workflows/ci.yml`; `dependabot.yml` |
@@ -58,22 +58,32 @@ UPSTASH_REDIS_REST_TOKEN=your-token
 ### 3. Set up Sentry (error monitoring)
 
 1. Create a Next.js project at [sentry.io](https://sentry.io) (free tier)
-2. Copy the DSN
+2. Copy the DSN and create an Auth Token (Settings → Auth Tokens)
 3. Add to Vercel env vars:
 
 ```env
 SENTRY_DSN=https://xxx@ooo.ingest.sentry.io/yyy
 NEXT_PUBLIC_SENTRY_DSN=https://xxx@ooo.ingest.sentry.io/yyy
+SENTRY_AUTH_TOKEN=sntrys_...   # enables source map upload for readable stack traces
+SENTRY_ORG=your-org-slug
+SENTRY_PROJECT=your-project-slug
 ```
 
-### 4. Run pgvector index migration (after embedding backfill)
+### 4. Run Phase 2 migrations
+
+```bash
+psql $DIRECT_DATABASE_URL -f db/migrations/0006_audit_log.sql
+psql $DIRECT_DATABASE_URL -f db/migrations/0007_gdpr_nullable_author.sql
+```
+
+### 5. Run pgvector index migration (after embedding backfill)
 
 ```bash
 psql $DIRECT_DATABASE_URL -f db/migrations/0005_pgvector_index.sql
 psql $DIRECT_DATABASE_URL -c "ANALYZE knowledge_entries;"
 ```
 
-### 5. Enforce CSP (after ~1 week in report-only mode)
+### 6. Enforce CSP (after ~1 week in report-only mode)
 
 In `next.config.ts`, change `Content-Security-Policy-Report-Only` to `Content-Security-Policy`.
 
