@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { categoryService } from '@/modules/knowledge/services/category.service'
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
+import { JsonLd } from '@/components/json-ld'
+import { env } from '@/lib/env'
 
 type Props = { params: Promise<{ categorySlug: string }> }
 
@@ -29,8 +31,18 @@ export default async function CategoryPage({ params }: Props) {
 
   const entries = await knowledgeService.listPublishedByCategory(category.id, 6)
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home',        item: env.NEXT_PUBLIC_SITE_URL },
+      { '@type': 'ListItem', position: 2, name: category.name, item: `${env.NEXT_PUBLIC_SITE_URL}/browse/${categorySlug}` },
+    ],
+  }
+
   return (
     <div id="main-content" className="mx-auto max-w-6xl px-4 py-12">
+      <JsonLd data={breadcrumbJsonLd} />
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>

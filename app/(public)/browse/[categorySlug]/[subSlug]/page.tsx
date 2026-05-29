@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils'
 import { categoryService } from '@/modules/knowledge/services/category.service'
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { PublicEntryCard } from '@/modules/knowledge/components/PublicEntryCard'
+import { JsonLd } from '@/components/json-ld'
+import { env } from '@/lib/env'
 
 type Props = { params: Promise<{ categorySlug: string; subSlug: string }> }
 
@@ -40,8 +42,19 @@ export default async function SubcategoryPage({ params }: Props) {
 
   const entries = await knowledgeService.listPublishedByCategory(sub.id)
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home',       item: env.NEXT_PUBLIC_SITE_URL },
+      { '@type': 'ListItem', position: 2, name: parent.name,  item: `${env.NEXT_PUBLIC_SITE_URL}/browse/${categorySlug}` },
+      { '@type': 'ListItem', position: 3, name: sub.name,     item: `${env.NEXT_PUBLIC_SITE_URL}/browse/${categorySlug}/${subSlug}` },
+    ],
+  }
+
   return (
     <div id="main-content" className="mx-auto max-w-6xl px-4 py-12">
+      <JsonLd data={breadcrumbJsonLd} />
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>

@@ -11,6 +11,7 @@ import type { KnowledgeEntryDraft } from '../schemas/ai.schema'
 import { eq } from 'drizzle-orm'
 import { promoteDraft, buildDraftSlug, buildEmbeddingText } from '../promote-draft'
 import { indexEntry } from '../services/embedding.service'
+import { sanitizeHtml } from '@/lib/utils/sanitize-html'
 
 export async function saveDraft(rawInput: string, structuredOutput: KnowledgeEntryDraft) {
   const user = await requireRole('editor')
@@ -18,9 +19,16 @@ export async function saveDraft(rawInput: string, structuredOutput: KnowledgeEnt
   const parsed = KnowledgeEntryDraftSchema.safeParse(structuredOutput)
   if (!parsed.success) throw new Error('Invalid draft structure')
 
+  // Sanitize HTML-like content in AI output before persisting (defence-in-depth)
+  const sanitized = {
+    ...parsed.data,
+    explanation:         sanitizeHtml(parsed.data.explanation),
+    refactoringGuidance: sanitizeHtml(parsed.data.refactoringGuidance),
+  }
+
   const [draft] = await db.insert(aiDrafts).values({
     rawInput,
-    structuredOutput: parsed.data,
+    structuredOutput: sanitized,
     modelUsed:        'meta-llama/llama-3.3-70b-instruct',
     createdBy:        user.id,
   }).returning()

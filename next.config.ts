@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const securityHeaders = [
   { key: 'Strict-Transport-Security',  value: 'max-age=63072000; includeSubDomains; preload' },
@@ -31,4 +32,16 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Source map upload — requires SENTRY_AUTH_TOKEN env var (set in Vercel, not .env.local)
+  org:     process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Silence Sentry build output in CI
+  silent: !process.env.CI,
+  // Disable source map upload if auth token is absent (dev / CI without secret)
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  // Avoid bundling Sentry on the server when DSN is not set
+  autoInstrumentServerFunctions: false,
+})
