@@ -40,7 +40,7 @@ export const knowledgeEntries = pgTable('knowledge_entries', {
   status:              entryStatusEnum('status').notNull().default('draft'),
   embedding:           vector('embedding', { dimensions: 1536 }),
   categoryId:          uuid('category_id').references(() => categories.id, { onDelete: 'set null' }),
-  createdBy:           uuid('created_by').notNull().references(() => users.id),
+  createdBy:           uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt:           timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt:           timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

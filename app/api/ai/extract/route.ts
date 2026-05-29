@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { extractKnowledgeDraft }      from '@/modules/ai/services/ai.service'
 import { aiExtractLimiter, isDailyTokenLimitExceeded, incrementDailyTokens } from '@/lib/rate-limit'
 import log from '@/lib/log'
+import { CircuitOpenError } from '@/lib/circuit-breaker'
 
 const RequestSchema = z.object({
   rawText: z.string().min(50).max(50000),
@@ -38,7 +39,13 @@ export async function POST(request: NextRequest) {
     log.info({ userId: user.id, model: modelUsed, totalTokens, endpoint: 'extract' }, '[ai] extraction complete')
     void incrementDailyTokens(user.id, totalTokens)
     return Response.json(data)
-  } catch {
+  } catch (err) {
+    if (CircuitOpenError.isInstance(err)) {
+      return Response.json(
+        { error: err.message },
+        { status: 503, headers: { 'Retry-After': String(err.retryAfter) } }
+      )
+    }
     return Response.json({ error: 'Extraction failed — all models unavailable. Try again.' }, { status: 503 })
   }
 }

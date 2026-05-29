@@ -1,9 +1,12 @@
+import { requireAuth } from '@/lib/auth/require-auth'
 import { ModelSelect } from './ModelSelect'
+import { DataSection } from './DataSection'
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const user = await requireAuth()
   return (
-    <div className="p-6 max-w-2xl">
-      <h1 className="text-xl font-semibold mb-6">Settings</h1>
+    <div className="p-6 max-w-2xl space-y-8">
+      <h1 className="text-xl font-semibold">Settings</h1>
 
       <div className="border p-5 space-y-4">
         <div>
@@ -15,6 +18,8 @@ export default function SettingsPage() {
           <ModelSelect />
         </div>
       </div>
+
+      <DataSection userId={user.id} userEmail={user.email} />
     </div>
   )
 }

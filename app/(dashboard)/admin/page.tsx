@@ -16,11 +16,21 @@ export default async function AdminReviewQueuePage() {
 
   return (
     <div className="mx-auto max-w-3xl p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Review Queue</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Entries submitted for review. Publish or send back to draft.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Review Queue</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Entries submitted for review. Publish or send back to draft.
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/users">Users</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/audit">Audit Log</Link>
+          </Button>
+        </div>
       </div>
 
       <Separator />

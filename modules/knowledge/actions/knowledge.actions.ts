@@ -11,6 +11,7 @@ import { indexEntry } from '@/modules/ai/services/embedding.service'
 import { buildEmbeddingText } from '@/modules/ai/promote-draft'
 import { sanitizeHtml } from '@/lib/utils/sanitize-html'
 import log from '@/lib/log'
+import { logAudit } from '@/lib/audit'
 
 function extractSummary(html: string | undefined, title: string): string {
   const text = (html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -101,20 +102,23 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
 }
 
 export async function deleteEntry(slug: string) {
-  await requireRole('admin')
+  const user = await requireRole('admin')
   await knowledgeService.delete(slug)
+  void logAudit(user.id, 'entry.delete', { targetType: 'entry', targetId: slug })
   revalidatePath('/knowledge')
   revalidateTag('entries', 'default')
   redirect('/knowledge')
 }
 
 export async function publishEntry(slug: string) {
-  await requireRole('admin')
+  const user = await requireRole('admin')
   const current = await knowledgeService.getBySlug(slug)
   if (!current) throw new Error('Entry not found')
   assertTransition(current.status, 'published')
   await knowledgeService.update(slug, { status: 'published' })
+  void logAudit(user.id, 'entry.publish', { targetType: 'entry', targetId: slug })
   revalidatePath('/knowledge'); revalidatePath(`/knowledge/${slug}`); revalidatePath('/admin')
+  revalidateTag('entries', 'default')
 }
 
 export async function submitForReview(slug: string) {

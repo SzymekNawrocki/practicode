@@ -1,5 +1,11 @@
 import { vi, describe, it, expect } from 'vitest'
 vi.mock('server-only', () => ({}))
+vi.mock('@/lib/circuit-breaker', () => ({
+  isCircuitOpen:  vi.fn().mockResolvedValue(false),
+  recordSuccess:  vi.fn().mockResolvedValue(undefined),
+  recordFailure:  vi.fn().mockResolvedValue(undefined),
+  CircuitOpenError: class CircuitOpenError extends Error {},
+}))
 import { RetryError, NoObjectGeneratedError } from 'ai'
 import { isModelUnavailable } from './ai.service'
 

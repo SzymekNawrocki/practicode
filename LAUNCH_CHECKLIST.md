@@ -63,7 +63,23 @@ NEXT_PUBLIC_SENTRY_DSN=https://xxx@ooo.ingest.sentry.io/yyy
 
 ---
 
-## 4. pgvector index — run after embedding backfill
+## 4. Run Phase 2 migrations
+
+Run these against your database (in order):
+
+```bash
+# Audit log table
+psql "$DIRECT_DATABASE_URL" -f db/migrations/0006_audit_log.sql
+
+# Make created_by nullable for GDPR account deletion
+psql "$DIRECT_DATABASE_URL" -f db/migrations/0007_gdpr_nullable_author.sql
+```
+
+**Verify:** In Supabase Table Editor, confirm `audit_log` table exists and `knowledge_entries.created_by` is nullable.
+
+---
+
+## 5. pgvector index — run after embedding backfill
 
 **Why:** Without the index, vector similarity search (`findSimilar`) is a full sequential scan. Run this **after** you have at least 100 published entries with embeddings.
 

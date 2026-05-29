@@ -73,6 +73,10 @@ app/
   (dashboard)/          ← auth required (layout redirects unauthenticated → /login)
     error.tsx           ← error boundary (Sentry capture)
     knowledge/          ← list, new, [slug], [slug]/edit — each has loading.tsx; [slug] has not-found.tsx
+    admin/page.tsx      ← review queue (in_review entries); links to /admin/users and /admin/audit
+    admin/users/        ← user management — role promotion/demotion, all changes audit-logged
+    admin/audit/        ← audit log viewer (last 200 events)
+    settings/page.tsx   ← AI model picker + GDPR data export/deletion (DataSection)
     ai/extract/
     skills/
   (auth)/login/
@@ -88,10 +92,12 @@ components/
   ui/                   ← shadcn components
 
 lib/
-  env.ts        ← Zod-validated env (crashes at startup on missing vars)
-  log.ts        ← pino structured logger (server-only) — use instead of console.error in server code
-  rate-limit.ts ← Upstash rate limiters (aiExtractLimiter, aiBatchLimiter, authLimiter) + daily token cap helpers
-  validate.ts   ← validate(schema, data) / validateForm(schema, data) — lightweight Zod parse helpers
+  env.ts            ← Zod-validated env (crashes at startup on missing vars)
+  log.ts            ← pino structured logger (server-only) — use instead of console.error in server code
+  rate-limit.ts     ← Upstash rate limiters (aiExtractLimiter, aiBatchLimiter, authLimiter) + daily token cap helpers
+  circuit-breaker.ts ← OpenRouter circuit breaker — opens after 3 full-chain failures, resets after 5 min; fail-open if Upstash not configured
+  audit.ts          ← logAudit(actorId, action, opts) — fire-and-forget insert into audit_log; never throws
+  validate.ts       ← validate(schema, data) / validateForm(schema, data) — lightweight Zod parse helpers
   utils/
     slug.ts         ← toSlug(text, suffix?) — shared slug generation utility
     sanitize-html.ts ← sanitizeHtml(html) — DOMPurify wrapper; call on save AND on render for Tiptap HTML
@@ -220,7 +226,8 @@ db/
 | `knowledge_entries` | Core entity — slug, title, summary, problem, explanation, best_practices[], anti_patterns[], examples[], refactoring_guidance, status, embedding vector(1536). `embedding` is nullable — populated by `indexEntry()` (fire-and-forget) on every `acceptDraft` and `updateEntry`. Null only until the first save. Use `findSimilar()` for cosine-distance queries (`<=>` operator). |
 | `entry_tags` | Junction: entries ↔ tags |
 | `entry_relationships` | Graph edges: related_to, extends, contradicts, refactors |
-| `ai_drafts` | AI extraction staging — raw_input, structured_output (jsonb), status (pending/accepted/rejected/edited) |
+| `ai_drafts` | AI extraction staging — raw_input, structured_output (jsonb), status (pending/accepted/rejected/edited). `created_by` nullable — ON DELETE SET NULL for GDPR. |
+| `audit_log` | Append-only admin action log — actor_id, action (entry.publish / entry.delete / user.role_change), target_type, target_id, metadata (jsonb), created_at. Never updated, never deleted. |
 
 ---
 

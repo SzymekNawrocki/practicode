@@ -260,14 +260,18 @@ Goal: every critical mutation path covered, not 100%.
 
 ## Phase 2 — Sustain & Scale
 
-- **Uptime monitoring** — Better Stack or UptimeRobot hitting `/api/health` every minute, paging on 3-min outage.
-- **Status page** — `status.practicode.dev` via Better Stack's free tier.
-- **Circuit breaker** for OpenRouter — after N consecutive failures across the fallback chain, surface a maintenance message in the extraction UI instead of grinding through models.
-- **Dependency audit cadence** — `npm audit` weekly via Dependabot is in Phase 0; add Snyk or socket.dev for transitive supply-chain scanning.
-- **Performance budget** — Lighthouse CI on PRs, with a budget on JS bundle + LCP. Fail the PR if regression > 10%.
-- **Data export / deletion endpoints** — GDPR Article 15/17. A Server Action that emits a user's data as JSON and a separate one that anonymises their entries on account deletion.
-- **Admin audit log** — append-only `audit_log` table; record every publish/delete/role-change with `actor_id, action, target_id, at`.
-- **Content moderation** — admin "flag entry" + queue for community-reported content once the site is public enough to attract any.
+| Task | Status | Notes |
+|---|---|---|
+| Circuit breaker | ✓ | `lib/circuit-breaker.ts` — 3 consecutive full-chain failures → circuit opens for 5 min; fail-open if Upstash not configured |
+| Admin audit log | ✓ | `db/migrations/0006_audit_log.sql`, `lib/audit.ts`; logs publish/delete/role-change; viewer at `/admin/audit` |
+| User management | ✓ | `/admin/users` — admin can promote/demote roles, all changes audit-logged |
+| GDPR data export (Art. 15) | ✓ | `exportMyData()` Server Action → JSON download from `/settings` |
+| GDPR account deletion (Art. 17) | ✓ | `deleteMyAccount()` — anonymises entries, deletes drafts + user row; `0007_gdpr_nullable_author.sql` migration |
+| Lighthouse CI budget | ✓ | `.lighthouserc.json` (perf ≥ 80, a11y ≥ 90, SEO ≥ 95); `.github/workflows/lighthouse.yml` manual-dispatch workflow |
+| Uptime monitoring | ⬜ manual | Set up Better Stack or UptimeRobot → `https://practicode.dev/api/health`, page on 3 failures |
+| Status page | ⬜ manual | `status.practicode.dev` via Better Stack free tier |
+| Snyk / socket.dev | ⬜ optional | Transitive supply-chain scanning — Dependabot already covers direct deps |
+| Content moderation | ⬜ future | Flag entry + admin queue — implement once public traffic arrives |
 
 ---
 

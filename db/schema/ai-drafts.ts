@@ -17,7 +17,7 @@ export const aiDrafts = pgTable('ai_drafts', {
   structuredOutput: jsonb('structured_output'),
   status:           aiDraftStatusEnum('status').notNull().default('pending'),
   modelUsed:        text('model_used').notNull(),
-  createdBy:        uuid('created_by').notNull().references(() => users.id),
+  createdBy:        uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt:        timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   reviewedAt:       timestamp('reviewed_at', { withTimezone: true }),
 })

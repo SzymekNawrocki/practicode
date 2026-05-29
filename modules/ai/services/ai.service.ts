@@ -6,6 +6,7 @@ import { KnowledgeEntryDraftSchema, BatchKnowledgeExtractionSchema } from '../sc
 import type { KnowledgeEntryDraft, BatchKnowledgeExtraction } from '../schemas/ai.schema'
 import { categoryService } from '@/modules/knowledge/services/category.service'
 import log from '@/lib/log'
+import { isCircuitOpen, recordSuccess, recordFailure, CircuitOpenError } from '@/lib/circuit-breaker'
 
 const openrouter = createOpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
@@ -71,6 +72,8 @@ async function generateWithFallback<T extends z.ZodTypeAny>(
   preferred: string,
   maxTokens: number,
 ): Promise<GenerateResult<z.infer<T>>> {
+  if (await isCircuitOpen()) throw new CircuitOpenError()
+
   const queue = [preferred, ...FALLBACK_CHAIN.filter((m) => m !== preferred)]
 
   let lastError: unknown
@@ -86,6 +89,7 @@ async function generateWithFallback<T extends z.ZodTypeAny>(
       })
       const totalTokens = result.usage?.totalTokens ?? 0
       log.info({ model, totalTokens }, '[ai] generation succeeded')
+      void recordSuccess()
       return { object: result.object as z.infer<T>, totalTokens, modelUsed: model }
     } catch (err) {
       if (isModelUnavailable(err)) {
@@ -96,6 +100,7 @@ async function generateWithFallback<T extends z.ZodTypeAny>(
       throw err
     }
   }
+  await recordFailure()
   throw lastError ?? new Error('All models in fallback chain failed')
 }
 

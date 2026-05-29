@@ -4,6 +4,7 @@ import { createSupabaseServerClient }  from '@/lib/supabase/server'
 import { extractBatchKnowledgeDraft }  from '@/modules/ai/services/ai.service'
 import { aiBatchLimiter, isDailyTokenLimitExceeded, incrementDailyTokens } from '@/lib/rate-limit'
 import log from '@/lib/log'
+import { CircuitOpenError } from '@/lib/circuit-breaker'
 
 const ALLOWED_MODELS = [
   'meta-llama/llama-3.3-70b-instruct',
@@ -47,6 +48,12 @@ export async function POST(request: NextRequest) {
     void incrementDailyTokens(user.id, totalTokens)
     return Response.json(data)
   } catch (err) {
+    if (CircuitOpenError.isInstance(err)) {
+      return Response.json(
+        { error: (err as CircuitOpenError).message },
+        { status: 503, headers: { 'Retry-After': String((err as CircuitOpenError).retryAfter) } }
+      )
+    }
     const msg = err instanceof Error ? err.message : String(err)
     log.error({ userId: user.id, err }, '[batch-extract] all models failed')
     return Response.json({ error: `Extraction failed: ${msg}` }, { status: 503 })
