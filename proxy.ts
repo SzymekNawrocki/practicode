@@ -46,5 +46,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    // Exclude API routes, Next internals, and all metadata/static asset routes.
+    // Metadata routes (manifest, icons, sitemap, robots, feed) must NOT be
+    // redirected to /login — the browser expects their real body, not HTML.
+    '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|sitemap.xml|robots.txt|feed.xml).*)',
+  ],
 }
