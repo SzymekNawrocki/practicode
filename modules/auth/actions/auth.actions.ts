@@ -15,8 +15,12 @@ export async function signInWithEmail(_prev: AuthState, formData: FormData): Pro
 
   const reqHeaders = await headers()
   const ip = reqHeaders.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
-  const { success } = await authLimiter.limit(ip)
-  if (!success) return { error: 'Too many login attempts. Please wait 15 minutes and try again.' }
+  try {
+    const { success } = await authLimiter.limit(ip)
+    if (!success) return { error: 'Too many login attempts. Please wait 15 minutes and try again.' }
+  } catch {
+    // Redis unavailable — fail open (allow the attempt through)
+  }
 
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase.auth.signInWithPassword({ email, password })
