@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { redirect }       from 'next/navigation'
 import { requireAuth, requireRole } from '@/lib/auth/require-auth'
 import { KnowledgeEntryUpdateSchema, QuickCreateSchema } from '../schemas/knowledge.schema'
@@ -49,7 +49,7 @@ export async function createEntry(_prev: KnowledgeEntryFormState, formData: Form
     createdBy: user.id,
   })
   revalidatePath('/knowledge')
-  revalidateTag('entries', 'default')
+  updateTag('entries')
   redirect(`/knowledge/${entry.slug}`)
 }
 
@@ -97,7 +97,7 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
   revalidatePath('/knowledge')
   revalidatePath(`/knowledge/${entry.slug}`)
   revalidatePath(`/entry/${entry.slug}`)
-  revalidateTag('entries', 'default')
+  updateTag('entries')
   redirect(`/knowledge/${entry.slug}`)
 }
 
@@ -106,7 +106,7 @@ export async function deleteEntry(slug: string) {
   await knowledgeService.delete(slug)
   void logAudit(user.id, 'entry.delete', { targetType: 'entry', targetId: slug })
   revalidatePath('/knowledge')
-  revalidateTag('entries', 'default')
+  updateTag('entries')
   redirect('/knowledge')
 }
 
@@ -118,7 +118,7 @@ export async function publishEntry(slug: string) {
   await knowledgeService.update(slug, { status: 'published' })
   void logAudit(user.id, 'entry.publish', { targetType: 'entry', targetId: slug })
   revalidatePath('/knowledge'); revalidatePath(`/knowledge/${slug}`); revalidatePath('/admin')
-  revalidateTag('entries', 'default')
+  updateTag('entries')
 }
 
 export async function submitForReview(slug: string) {

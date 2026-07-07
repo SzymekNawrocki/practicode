@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn(), updateTag: vi.fn() }))
 vi.mock('next/navigation', () => ({
   redirect: vi.fn().mockImplementation(() => { throw new Error('NEXT_REDIRECT') }),
 }))

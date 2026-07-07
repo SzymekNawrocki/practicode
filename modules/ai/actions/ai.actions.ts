@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { redirect }       from 'next/navigation'
 import { requireRole } from '@/lib/auth/require-auth'
 import log from '@/lib/log'
@@ -59,7 +59,7 @@ export async function acceptDraft(draftId: string, opts?: { redirect?: boolean; 
     .catch((err) => log.error({ err, entryId: entry.id }, 'indexEntry failed'))
 
   revalidatePath('/knowledge')
-  revalidateTag('entries', 'default')
+  updateTag('entries')
   if (shouldRedirect) redirect(`/knowledge/${entry.slug}/edit`)
   return { entrySlug: entry.slug }
 }

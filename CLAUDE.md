@@ -19,7 +19,7 @@ AI-assisted software engineering knowledge platform. A structured knowledge base
 | Auth | Supabase SSR (`@supabase/ssr`) |
 | AI | Vercel AI SDK + OpenRouter (`OPENROUTER_API_KEY`) |
 | State | Zustand v5 (ephemeral UI only) |
-| Search | Drizzle `ilike` (title + summary) + pgvector cosine similarity (`findSimilar`) |
+| Search | Drizzle weighted `tsvector`/`websearch_to_tsquery` (title A, summary B, explanation C) + pgvector cosine similarity (`findSimilar`) |
 
 ---
 
