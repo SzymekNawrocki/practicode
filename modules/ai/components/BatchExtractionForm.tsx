@@ -12,12 +12,12 @@ type Props = {
 }
 
 export function BatchExtractionForm({ categories }: Props) {
-  const { status, rawText, items, error, setRawText, startStreaming, setComplete, setError, markAccepted, markRejected, reset } =
+  const { status, rawText, items, error, setRawText, startLoading, setComplete, setError, markAccepted, markRejected, reset } =
     useBatchExtractionStore()
 
   async function handleExtract() {
     if (rawText.trim().length < 200) return
-    startStreaming()
+    startLoading()
 
     try {
       const model = typeof window !== 'undefined'
@@ -52,18 +52,18 @@ export function BatchExtractionForm({ categories }: Props) {
 
   return (
     <div className="space-y-4">
-      {status !== 'complete' && (
+      {status !== 'done' && (
         <>
           <Textarea
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
             placeholder="Paste a YouTube transcript, article, or long set of notes here…&#10;&#10;The AI will identify distinct engineering concepts and extract each one as a separate knowledge entry for your review."
             rows={14}
-            disabled={status === 'streaming'}
+            disabled={status === 'loading'}
             className="font-mono text-sm resize-none"
           />
 
-          {status === 'streaming' && (
+          {status === 'loading' && (
             <div className="border bg-muted/30 p-4 flex items-center gap-3">
               <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
               <span className="text-sm text-muted-foreground">Extracting concepts from transcript…</span>
@@ -80,20 +80,20 @@ export function BatchExtractionForm({ categories }: Props) {
             </p>
             <div className="flex gap-2">
               {status !== 'idle' && (
-                <Button variant="ghost" onClick={reset} disabled={status === 'streaming'}>Reset</Button>
+                <Button variant="ghost" onClick={reset} disabled={status === 'loading'}>Reset</Button>
               )}
               <Button
                 onClick={handleExtract}
-                disabled={status === 'streaming' || rawText.trim().length < 200}
+                disabled={status === 'loading' || rawText.trim().length < 200}
               >
-                {status === 'streaming' ? 'Extracting…' : 'Extract all concepts'}
+                {status === 'loading' ? 'Extracting…' : 'Extract all concepts'}
               </Button>
             </div>
           </div>
         </>
       )}
 
-      {status === 'complete' && (
+      {status === 'done' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">

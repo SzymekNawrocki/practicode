@@ -12,12 +12,12 @@ type Props = {
 }
 
 export function ExtractionForm({ categories }: Props) {
-  const { status, rawText, draft, error, setRawText, startStreaming, setComplete, setError, reset } =
+  const { status, rawText, draft, error, setRawText, startLoading, setComplete, setError, reset } =
     useExtractionStore()
 
   async function handleExtract() {
     if (rawText.trim().length < 50) return
-    startStreaming()
+    startLoading()
 
     try {
       const response = await fetch('/api/ai/extract', {
@@ -43,7 +43,7 @@ export function ExtractionForm({ categories }: Props) {
     }
   }
 
-  if (status === 'complete' && draft) {
+  if (status === 'done' && draft) {
     return <DraftReviewPanel draft={draft} rawText={rawText} categories={categories} onReset={reset} />
   }
 
@@ -54,11 +54,11 @@ export function ExtractionForm({ categories }: Props) {
         onChange={(e) => setRawText(e.target.value)}
         placeholder="Paste raw text, transcript, notes, or documentation here…&#10;&#10;The AI will extract structured engineering knowledge: best practices, anti-patterns, examples, and refactoring guidance."
         rows={12}
-        disabled={status === 'streaming'}
+        disabled={status === 'loading'}
         className="font-mono text-sm resize-none"
       />
 
-      {status === 'streaming' && (
+      {status === 'loading' && (
         <div className="border bg-muted/30 p-4 flex items-center gap-3">
           <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
           <span className="text-sm text-muted-foreground">Extracting knowledge…</span>
@@ -75,13 +75,13 @@ export function ExtractionForm({ categories }: Props) {
         </p>
         <div className="flex gap-2">
           {status !== 'idle' && (
-            <Button variant="ghost" onClick={reset} disabled={status === 'streaming'}>Reset</Button>
+            <Button variant="ghost" onClick={reset} disabled={status === 'loading'}>Reset</Button>
           )}
           <Button
             onClick={handleExtract}
-            disabled={status === 'streaming' || rawText.trim().length < 50}
+            disabled={status === 'loading' || rawText.trim().length < 50}
           >
-            {status === 'streaming' ? 'Extracting…' : 'Extract knowledge'}
+            {status === 'loading' ? 'Extracting…' : 'Extract knowledge'}
           </Button>
         </div>
       </div>
