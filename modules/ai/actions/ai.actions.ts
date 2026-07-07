@@ -3,12 +3,12 @@
 import { redirect } from 'next/navigation'
 import { authedAction } from '@/lib/auth/authed-action'
 import { db } from '@/db/client'
-import { aiDrafts, knowledgeEntries } from '@/db/schema'
+import { aiDrafts } from '@/db/schema'
 import { KnowledgeEntryDraftSchema } from '../schemas/ai.schema'
 import type { KnowledgeEntryDraft } from '../schemas/ai.schema'
 import { eq } from 'drizzle-orm'
-import { promoteDraft, buildDraftSlug } from '../promote-draft'
 import { reindexEntry } from '../services/embedding.service'
+import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { revalidateEntryCaches } from '@/modules/knowledge/cache'
 
 export const saveDraft = authedAction(
@@ -40,17 +40,7 @@ const acceptDraftAction = authedAction<
     const draft = await db.query.aiDrafts.findFirst({ where: eq(aiDrafts.id, draftId) })
     if (!draft) throw new Error('Draft not found')
 
-    const data = draft.structuredOutput as KnowledgeEntryDraft
-    const slug = buildDraftSlug(data.title, Date.now())
-
-    const [entry] = await db.insert(knowledgeEntries)
-      .values(promoteDraft(data, { slug, createdBy: user.id, categoryId: opts?.categoryId }))
-      .returning()
-
-    await db
-      .update(aiDrafts)
-      .set({ status: 'accepted', entryId: entry.id, reviewedAt: new Date() })
-      .where(eq(aiDrafts.id, draftId))
+    const entry = await knowledgeService.promoteFromDraft(draft, { createdBy: user.id, categoryId: opts?.categoryId })
 
     void reindexEntry(entry)
 

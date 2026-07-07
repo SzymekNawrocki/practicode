@@ -1,8 +1,10 @@
 import 'server-only'
 import { db } from '@/db/client'
-import { knowledgeEntries, entryTags, entryRelationships, tags, entryVersions } from '@/db/schema'
+import { knowledgeEntries, entryTags, entryRelationships, tags, entryVersions, aiDrafts } from '@/db/schema'
 import { desc, eq, and, isNotNull, inArray, sql } from 'drizzle-orm'
-import type { KnowledgeEntryInsert } from '@/db/schema'
+import type { KnowledgeEntryInsert, AiDraft } from '@/db/schema'
+import { promoteDraft, buildDraftSlug } from '@/modules/ai/promote-draft'
+import type { KnowledgeEntryDraft } from '@/modules/ai/schemas/ai.schema'
 
 type RelationshipType = 'related_to' | 'extends' | 'contradicts' | 'refactors'
 
@@ -57,6 +59,35 @@ export const knowledgeService = {
   async create(data: KnowledgeEntryInsert) {
     const [entry] = await db.insert(knowledgeEntries).values(data).returning()
     return entry
+  },
+
+  /**
+   * Inserts the entry and flips the draft to `accepted` in one transaction, so a failure on
+   * either write rolls back both. The draft update is conditioned on `status = 'pending'` —
+   * a draft that's already been accepted (concurrently, or by a duplicate request) fails the
+   * guard, the transaction rolls back, and no duplicate entry is created.
+   */
+  async promoteFromDraft(draft: AiDraft, ctx: { createdBy: string; categoryId?: string | null }) {
+    if (draft.status !== 'pending') throw new Error('Draft has already been promoted')
+
+    return db.transaction(async (tx) => {
+      const data = draft.structuredOutput as KnowledgeEntryDraft
+      const slug = buildDraftSlug(data.title, Date.now())
+
+      const [entry] = await tx.insert(knowledgeEntries)
+        .values(promoteDraft(data, { slug, createdBy: ctx.createdBy, categoryId: ctx.categoryId }))
+        .returning()
+
+      const [updatedDraft] = await tx
+        .update(aiDrafts)
+        .set({ status: 'accepted', entryId: entry.id, reviewedAt: new Date() })
+        .where(and(eq(aiDrafts.id, draft.id), eq(aiDrafts.status, 'pending')))
+        .returning()
+
+      if (!updatedDraft) throw new Error('Draft has already been promoted')
+
+      return entry
+    })
   },
 
   async update(slug: string, data: Partial<KnowledgeEntryInsert>) {
