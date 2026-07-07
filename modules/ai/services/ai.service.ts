@@ -8,7 +8,7 @@ import { categoryService } from '@/modules/knowledge/services/category.service'
 import log from '@/lib/log'
 import { isCircuitOpen, recordSuccess, recordFailure, CircuitOpenError } from '@/lib/circuit-breaker'
 
-const openrouter = createOpenAI({
+const defaultOpenrouter = createOpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
   apiKey:  process.env.OPENROUTER_API_KEY!,
 })
@@ -88,68 +88,94 @@ export function isModelUnavailable(err: unknown): boolean {
   return status !== undefined && status >= 500 && status < 600
 }
 
-type GenerateResult<T> = { object: T; totalTokens: number; modelUsed: string }
-
-async function generateWithFallback<T extends z.ZodTypeAny>(
-  schema: T,
-  system: string,
-  prompt: string,
-  preferred: string,
-  maxTokens: number,
-): Promise<GenerateResult<z.infer<T>>> {
-  if (await isCircuitOpen()) throw new CircuitOpenError()
-
-  const queue = [preferred, ...FALLBACK_CHAIN.filter((m) => m !== preferred)]
-
-  let lastError: unknown
-  for (const model of queue) {
-    try {
-      const result = await generateObject({
-        model:       openrouter.chat(model),
-        schema,
-        system,
-        prompt,
-        maxTokens,
-        abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
-      })
-      const totalTokens = result.usage?.totalTokens ?? 0
-      log.info({ model, totalTokens }, '[ai] generation succeeded')
-      void recordSuccess()
-      return { object: result.object as z.infer<T>, totalTokens, modelUsed: model }
-    } catch (err) {
-      if (isFatalConfigError(err)) {
-        log.error({ model, status: statusCodeOf(err) }, '[ai] fatal config/auth error — aborting fallback chain')
-        throw new ModelConfigError()
-      }
-      if (isModelUnavailable(err)) {
-        log.warn({ model, status: statusCodeOf(err) ?? 'unknown' }, '[ai] model failed, trying next')
-        lastError = err
-        continue
-      }
-      throw err
-    }
-  }
-  await recordFailure()
-  throw lastError ?? new Error('All models in fallback chain failed')
+// A failed attempt can still have billed tokens — e.g. NoObjectGeneratedError means the
+// model responded (and was billed) but produced unusable output. Count those toward the
+// total so a fallback chain that burns 3 failed attempts doesn't under-report spend.
+function tokensSpentOn(err: unknown): number {
+  if (NoObjectGeneratedError.isInstance(err)) return err.usage?.totalTokens ?? 0
+  return 0
 }
+
+type GenerateResult<T> = { object: T; totalTokens: number; modelUsed: string }
+type GenerateObjectFn = typeof generateObject
+type ChatModel = (model: string) => Parameters<GenerateObjectFn>[0]['model']
 
 export type ExtractionResult<T> = { data: T; totalTokens: number; modelUsed: string }
 
-export async function extractKnowledgeDraft(rawText: string, model?: string): Promise<ExtractionResult<KnowledgeEntryDraft>> {
-  const categoryBlock = await buildCategoryBlock()
-  const system = `You are an expert software engineering educator and knowledge curator.
+export type AiExtractionServiceDeps = {
+  chatModel?: ChatModel
+  generateObjectFn?: GenerateObjectFn
+}
+
+/**
+ * Factory seam: production code uses the zero-arg default (real OpenRouter client, real
+ * generateObject). Tests can pass a fake `generateObjectFn` to exercise generateWithFallback's
+ * retry/fail-fast/token-accounting logic directly, with no module mocking required.
+ */
+export function createAiExtractionService(deps: AiExtractionServiceDeps = {}) {
+  const chatModel = deps.chatModel ?? ((model: string) => defaultOpenrouter.chat(model))
+  const generateObjectFn = deps.generateObjectFn ?? generateObject
+
+  async function generateWithFallback<T extends z.ZodTypeAny>(
+    schema: T,
+    system: string,
+    prompt: string,
+    preferred: string,
+    maxTokens: number,
+  ): Promise<GenerateResult<z.infer<T>>> {
+    if (await isCircuitOpen()) throw new CircuitOpenError()
+
+    const queue = [preferred, ...FALLBACK_CHAIN.filter((m) => m !== preferred)]
+
+    let lastError: unknown
+    let tokensSpent = 0
+    for (const model of queue) {
+      try {
+        const result = await generateObjectFn({
+          model:       chatModel(model),
+          schema,
+          system,
+          prompt,
+          maxTokens,
+          abortSignal: AbortSignal.timeout(GENERATION_TIMEOUT_MS),
+        })
+        const totalTokens = tokensSpent + (result.usage?.totalTokens ?? 0)
+        log.info({ model, totalTokens }, '[ai] generation succeeded')
+        void recordSuccess()
+        return { object: result.object as z.infer<T>, totalTokens, modelUsed: model }
+      } catch (err) {
+        tokensSpent += tokensSpentOn(err)
+        if (isFatalConfigError(err)) {
+          log.error({ model, status: statusCodeOf(err) }, '[ai] fatal config/auth error — aborting fallback chain')
+          throw new ModelConfigError()
+        }
+        if (isModelUnavailable(err)) {
+          log.warn({ model, status: statusCodeOf(err) ?? 'unknown' }, '[ai] model failed, trying next')
+          lastError = err
+          continue
+        }
+        throw err
+      }
+    }
+    await recordFailure()
+    throw lastError ?? new Error('All models in fallback chain failed')
+  }
+
+  async function extractKnowledgeDraft(rawText: string, model?: string): Promise<ExtractionResult<KnowledgeEntryDraft>> {
+    const categoryBlock = await buildCategoryBlock()
+    const system = `You are an expert software engineering educator and knowledge curator.
 Extract structured engineering knowledge from the provided text.
 ${SHARED_CONTENT_RULES}
 
 ${categoryBlock}`
 
-  const { object, totalTokens, modelUsed } = await generateWithFallback(KnowledgeEntryDraftSchema, system, rawText, model ?? DEFAULT_MODEL, 6000)
-  return { data: object, totalTokens, modelUsed }
-}
+    const { object, totalTokens, modelUsed } = await generateWithFallback(KnowledgeEntryDraftSchema, system, rawText, model ?? DEFAULT_MODEL, 6000)
+    return { data: object, totalTokens, modelUsed }
+  }
 
-export async function extractBatchKnowledgeDraft(rawText: string, model?: string): Promise<ExtractionResult<BatchKnowledgeExtraction>> {
-  const categoryBlock = await buildCategoryBlock()
-  const system = `You are an expert software engineering educator and knowledge curator.
+  async function extractBatchKnowledgeDraft(rawText: string, model?: string): Promise<ExtractionResult<BatchKnowledgeExtraction>> {
+    const categoryBlock = await buildCategoryBlock()
+    const system = `You are an expert software engineering educator and knowledge curator.
 Extract ALL distinct engineering concepts from the provided transcript or article.
 For each concept, produce a separate, self-contained knowledge entry.
 Aim for 5–8 entries — split by distinct concept, not by section headings.
@@ -158,6 +184,14 @@ ${SHARED_CONTENT_RULES}
 
 ${categoryBlock}`
 
-  const { object, totalTokens, modelUsed } = await generateWithFallback(BatchKnowledgeExtractionSchema, system, rawText, model ?? DEFAULT_MODEL, 16000)
-  return { data: object, totalTokens, modelUsed }
+    const { object, totalTokens, modelUsed } = await generateWithFallback(BatchKnowledgeExtractionSchema, system, rawText, model ?? DEFAULT_MODEL, 16000)
+    return { data: object, totalTokens, modelUsed }
+  }
+
+  return { generateWithFallback, extractKnowledgeDraft, extractBatchKnowledgeDraft }
 }
+
+const defaultAiExtractionService = createAiExtractionService()
+
+export const extractKnowledgeDraft      = defaultAiExtractionService.extractKnowledgeDraft
+export const extractBatchKnowledgeDraft = defaultAiExtractionService.extractBatchKnowledgeDraft

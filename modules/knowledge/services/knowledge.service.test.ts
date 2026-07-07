@@ -1,7 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-vi.mock('server-only', () => ({}))
-
 const { mockTransaction, txInsertReturning, txUpdateReturning } = vi.hoisted(() => ({
   mockTransaction:     vi.fn(),
   txInsertReturning:   vi.fn(),

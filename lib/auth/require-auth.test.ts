@@ -1,7 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-vi.mock('server-only', () => ({}))
-
 // Mock Supabase client
 vi.mock('@/lib/supabase/server', () => ({
   createSupabaseServerClient: vi.fn(),

@@ -1,7 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-vi.mock('server-only', () => ({}))
-
 const { mockEmbed, mockDbSet, mockIsCircuitOpen, mockRecordSuccess, mockRecordFailure, mockLogError } = vi.hoisted(() => ({
   mockEmbed:         vi.fn(),
   mockDbSet:         vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),

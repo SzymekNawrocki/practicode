@@ -1,12 +1,10 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-vi.mock('server-only', () => ({}))
+import { z } from 'zod'
 
-const { mockIsCircuitOpen, mockRecordSuccess, mockRecordFailure, mockGenerateObject, mockListWithChildren } = vi.hoisted(() => ({
-  mockIsCircuitOpen:     vi.fn().mockResolvedValue(false),
-  mockRecordSuccess:     vi.fn().mockResolvedValue(undefined),
-  mockRecordFailure:     vi.fn().mockResolvedValue(undefined),
-  mockGenerateObject:    vi.fn(),
-  mockListWithChildren:  vi.fn().mockResolvedValue([]),
+const { mockIsCircuitOpen, mockRecordSuccess, mockRecordFailure } = vi.hoisted(() => ({
+  mockIsCircuitOpen: vi.fn().mockResolvedValue(false),
+  mockRecordSuccess: vi.fn().mockResolvedValue(undefined),
+  mockRecordFailure: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/circuit-breaker', () => ({
@@ -20,17 +18,9 @@ vi.mock('@/lib/circuit-breaker', () => ({
   },
 }))
 vi.mock('@/lib/log', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
-vi.mock('@ai-sdk/openai', () => ({ createOpenAI: () => ({ chat: (model: string) => ({ model }) }) }))
-vi.mock('ai', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('ai')>()
-  return { ...actual, generateObject: mockGenerateObject }
-})
-vi.mock('@/modules/knowledge/services/category.service', () => ({
-  categoryService: { listWithChildren: mockListWithChildren },
-}))
 
-import { RetryError, NoObjectGeneratedError } from 'ai'
-import { isModelUnavailable, extractKnowledgeDraft, ModelConfigError } from './ai.service'
+import { RetryError, NoObjectGeneratedError, type generateObject } from 'ai'
+import { isModelUnavailable, createAiExtractionService, extractKnowledgeDraft, extractBatchKnowledgeDraft, ModelConfigError } from './ai.service'
 import { CircuitOpenError } from '@/lib/circuit-breaker'
 
 describe('isModelUnavailable', () => {
@@ -89,23 +79,46 @@ describe('isModelUnavailable', () => {
   })
 })
 
-describe('extractKnowledgeDraft fallback chain', () => {
+function noObjectGeneratedErrorWithTokens(totalTokens: number): NoObjectGeneratedError {
+  return new NoObjectGeneratedError({
+    message: 'no object generated',
+    response: { id: 'r1', timestamp: new Date(), modelId: 'test' },
+    usage: {
+      inputTokens: 0, outputTokens: 0, totalTokens,
+      inputTokenDetails: { noCacheTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      outputTokenDetails: { textTokens: 0, reasoningTokens: 0 },
+    },
+    finishReason: 'error',
+  })
+}
+
+// Direct injection: no vi.mock('ai') / vi.mock('@ai-sdk/openai') needed — the fake
+// generateObjectFn is passed straight into the factory, so generateWithFallback's
+// retry/fail-fast/token-accounting logic is exercised with zero module mocking.
+describe('createAiExtractionService — generateWithFallback', () => {
+  const schema = z.object({ ok: z.boolean() })
+  let mockGenerateObject: ReturnType<typeof vi.fn>
+  let service: ReturnType<typeof createAiExtractionService>
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsCircuitOpen.mockResolvedValue(false)
-    mockListWithChildren.mockResolvedValue([])
+    mockGenerateObject = vi.fn()
+    service = createAiExtractionService({
+      chatModel:        (model: string) => ({ model }) as unknown as Parameters<typeof generateObject>[0]['model'],
+      generateObjectFn: mockGenerateObject as unknown as typeof generateObject,
+    })
   })
-
-  const RAW_TEXT = 'x'.repeat(60)
 
   it('500 → retries the next model and succeeds', async () => {
     mockGenerateObject
       .mockRejectedValueOnce({ statusCode: 500 })
-      .mockResolvedValueOnce({ object: {}, usage: { totalTokens: 42 } })
+      .mockResolvedValueOnce({ object: { ok: true }, usage: { totalTokens: 42 } })
 
-    const result = await extractKnowledgeDraft(RAW_TEXT, 'meta-llama/llama-3.3-70b-instruct')
+    const result = await service.generateWithFallback(schema, 'sys', 'prompt', 'model-a', 100)
 
     expect(result.totalTokens).toBe(42)
+    expect(result.modelUsed).toBe('deepseek/deepseek-v4-flash:free')
     expect(mockGenerateObject).toHaveBeenCalledTimes(2)
     expect(mockRecordSuccess).toHaveBeenCalled()
     expect(mockRecordFailure).not.toHaveBeenCalled()
@@ -114,7 +127,7 @@ describe('extractKnowledgeDraft fallback chain', () => {
   it('401 → fails fast without trying other models', async () => {
     mockGenerateObject.mockRejectedValue({ statusCode: 401 })
 
-    await expect(extractKnowledgeDraft(RAW_TEXT)).rejects.toThrow(ModelConfigError)
+    await expect(service.generateWithFallback(schema, 'sys', 'prompt', 'model-a', 100)).rejects.toThrow(ModelConfigError)
     expect(mockGenerateObject).toHaveBeenCalledTimes(1)
     expect(mockRecordFailure).not.toHaveBeenCalled()
   })
@@ -122,7 +135,7 @@ describe('extractKnowledgeDraft fallback chain', () => {
   it('429 → fails fast without trying other models', async () => {
     mockGenerateObject.mockRejectedValue({ statusCode: 429 })
 
-    await expect(extractKnowledgeDraft(RAW_TEXT)).rejects.toThrow(ModelConfigError)
+    await expect(service.generateWithFallback(schema, 'sys', 'prompt', 'model-a', 100)).rejects.toThrow(ModelConfigError)
     expect(mockGenerateObject).toHaveBeenCalledTimes(1)
     expect(mockRecordFailure).not.toHaveBeenCalled()
   })
@@ -130,15 +143,34 @@ describe('extractKnowledgeDraft fallback chain', () => {
   it('timeout on every model → retries the whole chain then records a circuit failure', async () => {
     mockGenerateObject.mockRejectedValue(new DOMException('aborted', 'TimeoutError'))
 
-    await expect(extractKnowledgeDraft(RAW_TEXT, 'meta-llama/llama-3.3-70b-instruct')).rejects.toThrow()
+    await expect(
+      service.generateWithFallback(schema, 'sys', 'prompt', 'meta-llama/llama-3.3-70b-instruct', 100),
+    ).rejects.toThrow()
     expect(mockGenerateObject).toHaveBeenCalledTimes(4) // full fallback chain, preferred de-duped
     expect(mockRecordFailure).toHaveBeenCalled()
+  })
+
+  it('sums tokens spent on failed attempts into the final total', async () => {
+    mockGenerateObject
+      .mockRejectedValueOnce(noObjectGeneratedErrorWithTokens(30))
+      .mockResolvedValueOnce({ object: { ok: true }, usage: { totalTokens: 20 } })
+
+    const result = await service.generateWithFallback(schema, 'sys', 'prompt', 'model-a', 100)
+
+    expect(result.totalTokens).toBe(50)
   })
 
   it('open circuit short-circuits before calling the provider', async () => {
     mockIsCircuitOpen.mockResolvedValue(true)
 
-    await expect(extractKnowledgeDraft(RAW_TEXT)).rejects.toThrow(CircuitOpenError)
+    await expect(service.generateWithFallback(schema, 'sys', 'prompt', 'model-a', 100)).rejects.toThrow(CircuitOpenError)
     expect(mockGenerateObject).not.toHaveBeenCalled()
+  })
+})
+
+describe('default extraction exports', () => {
+  it('extractKnowledgeDraft and extractBatchKnowledgeDraft are wired to the default service', () => {
+    expect(typeof extractKnowledgeDraft).toBe('function')
+    expect(typeof extractBatchKnowledgeDraft).toBe('function')
   })
 })

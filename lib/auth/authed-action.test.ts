@@ -1,8 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { z } from 'zod'
 
-vi.mock('server-only', () => ({}))
-
 const { mockRequireAuth, mockRequireRole, mockLogAudit, mockRedirect } = vi.hoisted(() => ({
   mockRequireAuth: vi.fn(),
   mockRequireRole: vi.fn(),
