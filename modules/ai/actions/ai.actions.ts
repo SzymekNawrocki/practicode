@@ -3,14 +3,13 @@
 import { revalidatePath, updateTag } from 'next/cache'
 import { redirect }       from 'next/navigation'
 import { requireRole } from '@/lib/auth/require-auth'
-import log from '@/lib/log'
 import { db } from '@/db/client'
 import { aiDrafts, knowledgeEntries } from '@/db/schema'
 import { KnowledgeEntryDraftSchema } from '../schemas/ai.schema'
 import type { KnowledgeEntryDraft } from '../schemas/ai.schema'
 import { eq } from 'drizzle-orm'
-import { promoteDraft, buildDraftSlug, buildEmbeddingText } from '../promote-draft'
-import { indexEntry } from '../services/embedding.service'
+import { promoteDraft, buildDraftSlug } from '../promote-draft'
+import { reindexEntry } from '../services/embedding.service'
 import { sanitizeHtml } from '@/lib/utils/sanitize-html'
 
 export async function saveDraft(rawInput: string, structuredOutput: KnowledgeEntryDraft) {
@@ -55,8 +54,7 @@ export async function acceptDraft(draftId: string, opts?: { redirect?: boolean; 
     .set({ status: 'accepted', entryId: entry.id, reviewedAt: new Date() })
     .where(eq(aiDrafts.id, draftId))
 
-  void indexEntry(entry.id, buildEmbeddingText(data))
-    .catch((err) => log.error({ err, entryId: entry.id }, 'indexEntry failed'))
+  void reindexEntry(entry)
 
   revalidatePath('/knowledge')
   updateTag('entries')

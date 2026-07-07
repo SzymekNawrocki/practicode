@@ -48,12 +48,8 @@ vi.mock('../services/knowledge.service', () => ({
 
 // Embedding mock
 vi.mock('@/modules/ai/services/embedding.service', () => ({
-  indexEntry: vi.fn().mockResolvedValue(undefined),
+  reindexEntry: vi.fn().mockResolvedValue(undefined),
 }))
-vi.mock('@/modules/ai/promote-draft', () => ({
-  buildEmbeddingText: vi.fn().mockReturnValue('text'),
-}))
-vi.mock('@/lib/log', () => ({ default: { error: vi.fn(), info: vi.fn(), warn: vi.fn() } }))
 
 import { updateEntry } from './knowledge.actions'
 import { knowledgeService } from '../services/knowledge.service'

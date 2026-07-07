@@ -7,10 +7,8 @@ import { KnowledgeEntryUpdateSchema, QuickCreateSchema } from '../schemas/knowle
 import { knowledgeService } from '../services/knowledge.service'
 import type { KnowledgeEntryFormState } from '../schemas/knowledge.schema'
 import { assertTransition } from '../lifecycle'
-import { indexEntry } from '@/modules/ai/services/embedding.service'
-import { buildEmbeddingText } from '@/modules/ai/promote-draft'
+import { reindexEntry } from '@/modules/ai/services/embedding.service'
 import { sanitizeHtml } from '@/lib/utils/sanitize-html'
-import log from '@/lib/log'
 import { logAudit } from '@/lib/audit'
 
 function extractSummary(html: string | undefined, title: string): string {
@@ -91,9 +89,7 @@ export async function updateEntry(_prev: KnowledgeEntryFormState, formData: Form
 
   const entry = await knowledgeService.update(slug, data)
   await knowledgeService.setTags(entry.id, tagIds)
-  void indexEntry(entry.id, buildEmbeddingText({
-    title: entry.title, summary: entry.summary, problem: entry.problem,
-  })).catch((err) => log.error({ err, entryId: entry.id }, 'indexEntry failed'))
+  void reindexEntry(entry)
   revalidatePath('/knowledge')
   revalidatePath(`/knowledge/${entry.slug}`)
   revalidatePath(`/entry/${entry.slug}`)
