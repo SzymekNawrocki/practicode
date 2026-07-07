@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ENTRY_STATUSES } from '@/db/schema'
+import { sanitizedHtml } from '@/lib/utils/sanitize-html'
 
 export const SlugSchema = z
   .string()
@@ -18,22 +19,24 @@ export const KnowledgeEntrySchema = z.object({
   slug:                SlugSchema,
   summary:             z.string().min(10).max(500),
   problem:             z.string().optional(),
-  explanation:         z.string().optional(),
+  explanation:         sanitizedHtml(),
   bestPractices:       z.array(z.string()).default([]),
   antiPatterns:        z.array(z.string()).default([]),
   examples:            z.array(CodeExampleSchema).default([]),
-  refactoringGuidance: z.string().optional(),
+  refactoringGuidance: sanitizedHtml(),
   relatedConcepts:     z.array(z.string()).default([]),
   status:              z.enum(ENTRY_STATUSES).default('draft'),
   categoryId:          z.string().uuid().optional(),
 })
 
-export const KnowledgeEntryUpdateSchema = KnowledgeEntrySchema.partial().required({ slug: true })
+export const KnowledgeEntryUpdateSchema = KnowledgeEntrySchema.partial()
+  .required({ slug: true })
+  .extend({ tagIds: z.array(z.string()).default([]) })
 
 export const QuickCreateSchema = z.object({
   title:       z.string().min(3).max(200),
   slug:        SlugSchema,
-  explanation: z.string().optional(),
+  explanation: sanitizedHtml(),
   categoryId:  z.string().uuid().optional(),
 })
 

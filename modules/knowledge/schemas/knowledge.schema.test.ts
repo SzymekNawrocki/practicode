@@ -20,6 +20,32 @@ describe('KnowledgeEntrySchema', () => {
     })
     expect(result.success).toBe(true)
   })
+
+  it('sanitizes explanation and refactoringGuidance HTML on parse', () => {
+    const result = KnowledgeEntrySchema.safeParse({
+      title:               'Valid Title',
+      slug:                'valid-title',
+      summary:             'Long enough summary text here',
+      explanation:         '<p>Safe</p><script>alert(1)</script>',
+      refactoringGuidance: '<p>Guidance</p><img src=x onerror=evil()>',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.explanation).toBe('<p>Safe</p>')
+      expect(result.data.refactoringGuidance).toContain('<p>Guidance</p>')
+      expect(result.data.refactoringGuidance).not.toContain('onerror')
+    }
+  })
+
+  it('leaves explanation undefined when omitted', () => {
+    const result = KnowledgeEntrySchema.safeParse({
+      title:   'Valid Title',
+      slug:    'valid-title',
+      summary: 'Long enough summary text here',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.explanation).toBeUndefined()
+  })
 })
 
 describe('KnowledgeEntryDraftSchema', () => {
