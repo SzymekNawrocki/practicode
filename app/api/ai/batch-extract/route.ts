@@ -1,10 +1,8 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
-import { createSupabaseServerClient }  from '@/lib/supabase/server'
-import { extractBatchKnowledgeDraft }  from '@/modules/ai/services/ai.service'
-import { aiBatchLimiter, isDailyTokenLimitExceeded, incrementDailyTokens } from '@/lib/rate-limit'
-import log from '@/lib/log'
-import { CircuitOpenError } from '@/lib/circuit-breaker'
+import { extractBatchKnowledgeDraft } from '@/modules/ai/services/ai.service'
+import { aiBatchLimiter } from '@/lib/rate-limit'
+import { withAiGuards } from '@/lib/ai/route-guard'
 
 const ALLOWED_MODELS = [
   'meta-llama/llama-3.3-70b-instruct',
@@ -19,43 +17,15 @@ const RequestSchema = z.object({
 })
 
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return new Response('Unauthorized', { status: 401 })
-
-  const { success, reset } = await aiBatchLimiter.limit(user.id)
-  if (!success) {
-    return Response.json(
-      { error: 'Rate limit reached. You can run up to 3 batch extractions per hour.' },
-      { status: 429, headers: { 'Retry-After': String(Math.ceil((reset - Date.now()) / 1000)) } }
-    )
-  }
-
-  if (await isDailyTokenLimitExceeded(user.id)) {
-    return Response.json(
-      { error: 'Daily token limit reached (100k tokens/day). Try again tomorrow.' },
-      { status: 429 }
-    )
-  }
-
-  const body = await request.json()
-  const parsed = RequestSchema.safeParse(body)
-  if (!parsed.success) return Response.json({ error: 'Input must be between 200 and 100,000 characters' }, { status: 400 })
-
-  try {
-    const { data, totalTokens, modelUsed } = await extractBatchKnowledgeDraft(parsed.data.rawText, parsed.data.model)
-    log.info({ userId: user.id, model: modelUsed, totalTokens, endpoint: 'batch-extract' }, '[ai] batch extraction complete')
-    void incrementDailyTokens(user.id, totalTokens)
-    return Response.json(data)
-  } catch (err) {
-    if (CircuitOpenError.isInstance(err)) {
-      return Response.json(
-        { error: (err as CircuitOpenError).message },
-        { status: 503, headers: { 'Retry-After': String((err as CircuitOpenError).retryAfter) } }
-      )
-    }
-    const msg = err instanceof Error ? err.message : String(err)
-    log.error({ userId: user.id, err }, '[batch-extract] all models failed')
-    return Response.json({ error: `Extraction failed: ${msg}` }, { status: 503 })
-  }
+  return withAiGuards(
+    request,
+    {
+      limiter: aiBatchLimiter,
+      schema: RequestSchema,
+      rateLimitMessage: 'Rate limit reached. You can run up to 3 batch extractions per hour.',
+      parseErrorMessage: 'Input must be between 200 and 100,000 characters',
+      endpoint: 'batch-extract',
+    },
+    (input) => extractBatchKnowledgeDraft(input.rawText, input.model),
+  )
 }

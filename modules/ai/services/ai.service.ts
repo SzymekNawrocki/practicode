@@ -47,20 +47,45 @@ CODE EXAMPLES: For any technical concept involving code, APIs, data structures, 
 
 SUGGESTED TAGS: Lowercase keywords like "solid", "clean-code", "refactoring", "typescript".`
 
-// Treat provider-level failures as "try the next model".
-// Only let through errors unrelated to model availability (network failures, Zod parse errors, etc.).
-export function isModelUnavailable(err: unknown): boolean {
-  if (typeof err !== 'object' || err === null) return false
-  // APICallError: HTTP 4xx/5xx from the provider
-  if ('statusCode' in err) {
-    const status = (err as { statusCode: number }).statusCode
-    return status >= 400 && status < 600
+// Thrown when the provider rejects the request for a reason that will recur identically
+// for every model (bad API key, exhausted quota) — no point burning the fallback chain.
+export class ModelConfigError extends Error {
+  constructor(message = 'AI provider rejected the request — check API key/config.') {
+    super(message)
+    this.name = 'ModelConfigError'
   }
+  static isInstance(err: unknown): err is ModelConfigError {
+    return err instanceof ModelConfigError
+  }
+}
+
+function statusCodeOf(err: unknown): number | undefined {
+  if (typeof err !== 'object' || err === null || !('statusCode' in err)) return undefined
+  return (err as { statusCode: number }).statusCode
+}
+
+function isTimeoutError(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false
+  const name = (err as { name?: string }).name
+  return name === 'TimeoutError' || name === 'AbortError'
+}
+
+// Auth/quota/malformed-request errors — identical outcome on every model, fail fast.
+function isFatalConfigError(err: unknown): boolean {
+  const status = statusCodeOf(err)
+  return status === 400 || status === 401 || status === 403 || status === 429
+}
+
+// Provider/model hiccups worth retrying against the next model in the chain.
+export function isModelUnavailable(err: unknown): boolean {
+  if (isTimeoutError(err)) return true
   // RetryError: AI SDK exhausted its internal retries against this model
   if (RetryError.isInstance(err)) return true
   // NoObjectGeneratedError: model responded but produced no usable structured output
   if (NoObjectGeneratedError.isInstance(err)) return true
-  return false
+  // APICallError: 5xx from the provider — a fatal-config 4xx is handled separately above
+  const status = statusCodeOf(err)
+  return status !== undefined && status >= 500 && status < 600
 }
 
 type GenerateResult<T> = { object: T; totalTokens: number; modelUsed: string }
@@ -92,8 +117,12 @@ async function generateWithFallback<T extends z.ZodTypeAny>(
       void recordSuccess()
       return { object: result.object as z.infer<T>, totalTokens, modelUsed: model }
     } catch (err) {
+      if (isFatalConfigError(err)) {
+        log.error({ model, status: statusCodeOf(err) }, '[ai] fatal config/auth error — aborting fallback chain')
+        throw new ModelConfigError()
+      }
       if (isModelUnavailable(err)) {
-        log.warn({ model, status: (err as { statusCode?: number }).statusCode ?? 'unknown' }, '[ai] model failed, trying next')
+        log.warn({ model, status: statusCodeOf(err) ?? 'unknown' }, '[ai] model failed, trying next')
         lastError = err
         continue
       }
