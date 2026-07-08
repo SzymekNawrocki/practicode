@@ -1,4 +1,8 @@
-export const revalidate = 1800
+// Rendered dynamically so `next build` never connects to the DB (the tag cloud
+// + category grid query Postgres). Keeps the build hermetic; the queries are
+// cheap/indexed at request time. Revert to `revalidate` for static ISR once a
+// DATABASE_URL is guaranteed reachable at build.
+export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'

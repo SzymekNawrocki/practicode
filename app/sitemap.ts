@@ -3,7 +3,8 @@ import { knowledgeService } from '@/modules/knowledge/services/knowledge.service
 import { categoryService } from '@/modules/knowledge/services/category.service'
 import { env } from '@/lib/env'
 
-export const revalidate = 3600
+// Dynamic so the build stays hermetic (queries published entries + categories).
+export const dynamic = 'force-dynamic'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = env.NEXT_PUBLIC_SITE_URL

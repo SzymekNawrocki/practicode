@@ -1,7 +1,8 @@
 import { knowledgeService } from '@/modules/knowledge/services/knowledge.service'
 import { env } from '@/lib/env'
 
-export const revalidate = 3600
+// Dynamic so the build stays hermetic (queries published entries).
+export const dynamic = 'force-dynamic'
 
 function escapeXml(str: string) {
   return str

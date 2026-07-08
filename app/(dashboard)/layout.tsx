@@ -1,6 +1,12 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/require-auth'
+
+// The entire dashboard is auth-gated and renders per-user live data — it must
+// never be statically prerendered at build (doing so connects to the DB during
+// `next build`, which fails when no DATABASE_URL is reachable). Applies to all
+// nested (dashboard) pages. Requires Cache Components to be OFF (it is).
+export const dynamic = 'force-dynamic'
 import { UserMenu }     from '@/modules/auth/components/UserMenu'
 import { SearchBar }    from '@/modules/search/components/SearchBar'
 import { Separator }    from '@/components/ui/separator'
