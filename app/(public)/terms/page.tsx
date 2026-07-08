@@ -42,7 +42,7 @@ export default function TermsPage() {
 
       <h2>Limitation of liability</h2>
       <p>
-        PractiCode is provided "as is" without warranties. To the maximum extent permitted by law we are not
+        PractiCode is provided &quot;as is&quot; without warranties. To the maximum extent permitted by law we are not
         liable for any indirect, incidental, or consequential damages arising from your use of the service.
       </p>
 

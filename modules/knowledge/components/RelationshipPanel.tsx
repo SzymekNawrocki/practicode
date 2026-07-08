@@ -20,20 +20,26 @@ type RelatedEntry = {
   slug:  string
 }
 
-type Relationship = {
+type OutgoingRelationship = {
+  sourceId:         string
+  targetId:         string
+  relationshipType: string
+  target:           RelatedEntry
+}
+
+type IncomingRelationship = {
   sourceId:         string
   targetId:         string
   relationshipType: string
   source:           RelatedEntry
-  target:           RelatedEntry
 }
 
 type Props = {
   entryId:   string
   entrySlug: string
   canEdit:   boolean
-  outgoing:  Relationship[]
-  incoming:  Relationship[]
+  outgoing:  OutgoingRelationship[]
+  incoming:  IncomingRelationship[]
 }
 
 export function RelationshipPanel({ entryId, entrySlug, canEdit, outgoing, incoming }: Props) {

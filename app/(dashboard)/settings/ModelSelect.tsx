@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Select,
   SelectContent,
@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useIsClient } from '@/hooks/useIsClient'
 
 const LS_KEY        = 'practicode:extractionModel'
 const DEFAULT_MODEL = 'deepseek/deepseek-v4-flash:free'
@@ -36,15 +37,11 @@ const MODELS = [
 ]
 
 export function ModelSelect() {
-  const [model,   setModel]   = useState(DEFAULT_MODEL)
-  const [saved,   setSaved]   = useState(false)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-    const stored = localStorage.getItem(LS_KEY)
-    if (stored) setModel(stored)
-  }, [])
+  const mounted = useIsClient()
+  const [model, setModel] = useState(() =>
+    typeof window === 'undefined' ? DEFAULT_MODEL : localStorage.getItem(LS_KEY) ?? DEFAULT_MODEL
+  )
+  const [saved, setSaved] = useState(false)
 
   function handleChange(value: string) {
     setModel(value)

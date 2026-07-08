@@ -181,8 +181,8 @@ export default async function EntryDetailPage({ params }: Props) {
         entryId={entry.id}
         entrySlug={slug}
         canEdit={canEdit}
-        outgoing={entry.outgoingRelationships as any}
-        incoming={entry.incomingRelationships as any}
+        outgoing={entry.outgoingRelationships}
+        incoming={entry.incomingRelationships}
       />
     </div>
   )

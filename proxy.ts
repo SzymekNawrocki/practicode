@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { env } from '@/lib/env'
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request })
+  const response = NextResponse.next({ request })
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,

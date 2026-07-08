@@ -26,8 +26,8 @@ export function SearchBar() {
   const debouncedQuery = useDebounce(query, 300)
 
   useEffect(() => {
-    if (debouncedQuery.length < 2) { setResults([]); return }
     startTransition(async () => {
+      if (debouncedQuery.length < 2) { setResults([]); return }
       try {
         const entries = await searchEntries(debouncedQuery)
         setResults(entries)

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Nested git worktrees (gitignored, but not excluded from the lint glob by default)
+    ".claude/**",
   ]),
 ]);
 

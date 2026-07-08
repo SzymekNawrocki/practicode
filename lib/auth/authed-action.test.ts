@@ -71,6 +71,8 @@ describe('authedAction', () => {
 
 const InputSchema = z.object({ name: z.string().min(1, 'Name is required') })
 
+type FormActionState = { error: Record<string, string[]> } | undefined
+
 describe('authedFormAction', () => {
   function makeFormData(fields: Record<string, string>): FormData {
     const fd = new FormData()
@@ -85,7 +87,7 @@ describe('authedFormAction', () => {
         role:   'editor',
         schema: InputSchema,
         parseInput: (fd) => ({ name: fd.get('name') }),
-        toErrorState: (error) => ({ error }),
+        toErrorState: (error): FormActionState => ({ error }),
       },
       handler,
     )
@@ -106,7 +108,7 @@ describe('authedFormAction', () => {
         role:   'editor',
         schema: InputSchema,
         parseInput: (fd) => ({ name: fd.get('name') }),
-        toErrorState: (error) => ({ error }),
+        toErrorState: (error): FormActionState => ({ error }),
         revalidate,
         audit,
       },

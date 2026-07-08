@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -8,21 +8,34 @@ const STORAGE_KEY = 'practicode:cookie-consent'
 
 type ConsentState = 'accepted' | 'declined' | null
 
-export function CookieConsent() {
-  const [consent, setConsent] = useState<ConsentState | 'loading'>('loading')
+const listeners = new Set<() => void>()
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as ConsentState | null
-    setConsent(stored)
-  }, [])
+function subscribe(onStoreChange: () => void) {
+  listeners.add(onStoreChange)
+  return () => listeners.delete(onStoreChange)
+}
+
+function getSnapshot(): ConsentState {
+  return localStorage.getItem(STORAGE_KEY) as ConsentState
+}
+
+function getServerSnapshot(): ConsentState | 'loading' {
+  return 'loading'
+}
+
+function setConsent(value: 'accepted' | 'declined') {
+  localStorage.setItem(STORAGE_KEY, value)
+  listeners.forEach((l) => l())
+}
+
+export function CookieConsent() {
+  const consent = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   function accept() {
-    localStorage.setItem(STORAGE_KEY, 'accepted')
     setConsent('accepted')
   }
 
   function decline() {
-    localStorage.setItem(STORAGE_KEY, 'declined')
     setConsent('declined')
   }
 

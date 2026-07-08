@@ -31,7 +31,7 @@ export default function PrivacyPage() {
       <h3>AI extraction data</h3>
       <p>
         When you use the AI extraction feature, the text you submit is sent to OpenRouter (our AI provider).
-        OpenRouter's privacy policy governs that processing. We do not permanently store your raw input beyond
+        OpenRouter&apos;s privacy policy governs that processing. We do not permanently store your raw input beyond
         what is needed to complete the extraction.
       </p>
 
@@ -59,7 +59,7 @@ export default function PrivacyPage() {
       <p>Under GDPR you have the right to access, correct, export, and delete your data. To exercise these rights, email <a href="mailto:devnawrocki@gmail.com">devnawrocki@gmail.com</a>. We will respond within 30 days.</p>
 
       <h2>Changes</h2>
-      <p>We will post updates to this page with a revised "last updated" date. Continued use after changes constitutes acceptance.</p>
+      <p>We will post updates to this page with a revised &quot;last updated&quot; date. Continued use after changes constitutes acceptance.</p>
     </main>
   )
 }
