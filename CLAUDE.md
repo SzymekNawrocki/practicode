@@ -92,7 +92,7 @@ components/
   ui/                   ← shadcn components
 
 lib/
-  env.ts            ← Zod-validated env (crashes at startup on missing vars)
+  env.ts            ← Zod-validated env, lazy per-variable (Proxy). A missing var throws only when that var is first READ at runtime — never at import/build time, so a secret-less build (Dependabot preview, fork, fresh CI runner) still compiles
   log.ts            ← pino structured logger (server-only) — use instead of console.error in server code
   rate-limit.ts     ← Upstash rate limiters (aiExtractLimiter, aiBatchLimiter, authLimiter) + daily token cap helpers
   circuit-breaker.ts ← OpenRouter circuit breaker — opens after 3 full-chain failures, resets after 5 min; fail-open if Upstash not configured
@@ -145,7 +145,7 @@ db/
 ### Database
 - Two connection strings required:
   - `DATABASE_URL` — Supabase Transaction Pooler (port 6543) — runtime
-  - `DATABASE_DIRECT_URL` — direct connection (port 5432) — `drizzle-kit` migrations only
+  - `DIRECT_DATABASE_URL` — direct connection (port 5432) — `drizzle-kit` migrations only
 - All Drizzle relation objects (`xxxRelations`) are defined in the same file as their table
 - JSONB columns for arrays: `best_practices`, `anti_patterns`, `examples`, `related_concepts`
 
@@ -178,7 +178,7 @@ db/
 ### Validation
 - Zod on all Server Action inputs and Route Handler request bodies
 - `lib/validate.ts` exposes two helpers: `validate(schema, data)` (throws on failure) and `validateForm(schema, data)` (returns `{ ok, data | error }` for form-state actions)
-- `lib/env.ts` validates all env vars at module load time
+- `lib/env.ts` validates each env var lazily on first access (Proxy over per-variable Zod schemas), not eagerly at module load — so `next build` page-data collection never crashes on absent runtime secrets. Never call `envSchema.parse(process.env)` at import time; that recouples build to runtime secrets. `NEXT_PUBLIC_*` vars must still be present at build (Next inlines them into client bundles)
 - `JSON.parse` from FormData must use the `parseJsonField()` helper in `knowledge.actions.ts` — never raw `JSON.parse`
 
 ### Routing
@@ -249,7 +249,7 @@ npm run test:watch    # vitest in watch mode
 npm run db:seed       # wipe + reseed 66 categories (11 AI-era parents × 5 children)
 npm run db:seed-tags  # upsert 18 system tags (TypeScript, Redis, LangChain…) — idempotent
 npm run db:generate   # generate SQL migrations from schema changes
-npm run db:migrate    # run migrations (use DATABASE_DIRECT_URL)
+npm run db:migrate    # run migrations (use DIRECT_DATABASE_URL)
 npm run db:studio     # visual DB explorer
 ```
 

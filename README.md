@@ -105,7 +105,7 @@ Filter by category, cherry-pick individual entries, preview the output in-browse
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22.x (pinned via `.nvmrc` and `engines` — Node 24 breaks Vercel build caching)
 - A [Supabase](https://supabase.com) project with the `pgvector` extension enabled
 - An [OpenRouter](https://openrouter.ai) API key
 
@@ -192,7 +192,7 @@ npm run build         # production build
 npm run test          # run vitest unit tests
 npm run test:watch    # vitest in watch mode
 npm run db:generate   # generate SQL migrations from schema changes
-npm run db:migrate    # apply migrations (uses DATABASE_DIRECT_URL)
+npm run db:migrate    # apply migrations (uses DIRECT_DATABASE_URL)
 npm run db:seed       # wipe and reseed categories
 npm run db:seed-tags  # upsert system tags
 npm run db:studio     # open Drizzle visual DB explorer
