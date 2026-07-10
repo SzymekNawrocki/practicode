@@ -1,4 +1,4 @@
-import { jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { knowledgeEntries } from './knowledge'
 import { users } from './users'
@@ -20,7 +20,10 @@ export const aiDrafts = pgTable('ai_drafts', {
   createdBy:        uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt:        timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   reviewedAt:       timestamp('reviewed_at', { withTimezone: true }),
-})
+}, (table) => [
+  index('ai_drafts_entry_id_idx').on(table.entryId),
+  index('ai_drafts_created_by_idx').on(table.createdBy),
+])
 
 export const aiDraftsRelations = relations(aiDrafts, ({ one }) => ({
   entry:  one(knowledgeEntries, { fields: [aiDrafts.entryId],  references: [knowledgeEntries.id] }),

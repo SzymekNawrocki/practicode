@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, primaryKey, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, pgEnum, pgTable, primaryKey, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { knowledgeEntries } from './knowledge'
 
@@ -16,6 +16,7 @@ export const entryRelationships = pgTable('entry_relationships', {
   createdAt:        timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   primaryKey({ columns: [table.sourceId, table.targetId, table.relationshipType] }),
+  index('entry_relationships_target_id_idx').on(table.targetId),
 ])
 
 export const entryRelationshipsRelations = relations(entryRelationships, ({ one }) => ({

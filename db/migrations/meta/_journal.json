@@ -64,6 +64,13 @@
       "when": 1778839504522,
       "tag": "0008_audit_log_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778839504523,
+      "tag": "0009_fk_covering_indexes",
+      "breakpoints": true
     }
   ]
 }
