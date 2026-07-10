@@ -57,6 +57,13 @@
       "when": 1778839504521,
       "tag": "0007_gdpr_nullable_author",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1778839504522,
+      "tag": "0008_audit_log_rls",
+      "breakpoints": true
     }
   ]
 }
