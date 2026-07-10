@@ -1,4 +1,4 @@
-import { jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import { knowledgeEntries } from './knowledge'
 import { users } from './users'
@@ -19,7 +19,10 @@ export const entryVersions = pgTable('entry_versions', {
   categoryId:          uuid('category_id'),
   savedAt:             timestamp('saved_at', { withTimezone: true }).notNull().defaultNow(),
   savedBy:             uuid('saved_by').notNull().references(() => users.id),
-})
+}, (table) => [
+  index('entry_versions_entry_id_idx').on(table.entryId),
+  index('entry_versions_saved_by_idx').on(table.savedBy),
+])
 
 export const entryVersionsRelations = relations(entryVersions, ({ one }) => ({
   entry: one(knowledgeEntries, { fields: [entryVersions.entryId], references: [knowledgeEntries.id] }),

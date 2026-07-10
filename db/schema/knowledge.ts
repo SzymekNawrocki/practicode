@@ -47,6 +47,7 @@ export const knowledgeEntries = pgTable('knowledge_entries', {
   index('ke_status_idx').on(table.status),
   index('ke_slug_idx').on(table.slug),
   index('ke_created_by_idx').on(table.createdBy),
+  index('ke_category_id_idx').on(table.categoryId),
 ])
 
 export const knowledgeEntriesRelations = relations(knowledgeEntries, ({ one, many }) => ({

@@ -1,4 +1,4 @@
-import { pgTable, primaryKey, uuid } from 'drizzle-orm/pg-core'
+import { index, pgTable, primaryKey, uuid } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { knowledgeEntries } from './knowledge'
 import { tags } from './tags'
@@ -8,6 +8,7 @@ export const entryTags = pgTable('entry_tags', {
   tagId:   uuid('tag_id').notNull().references(() => tags.id,              { onDelete: 'cascade' }),
 }, (table) => [
   primaryKey({ columns: [table.entryId, table.tagId] }),
+  index('entry_tags_tag_id_idx').on(table.tagId),
 ])
 
 export const entryTagsRelations = relations(entryTags, ({ one }) => ({

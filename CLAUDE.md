@@ -148,6 +148,13 @@ db/
   - `DIRECT_DATABASE_URL` — direct connection (port 5432) — `drizzle-kit` migrations only
 - All Drizzle relation objects (`xxxRelations`) are defined in the same file as their table
 - JSONB columns for arrays: `best_practices`, `anti_patterns`, `examples`, `related_concepts`
+- `DIRECT_DATABASE_URL` must be a **session-capable** connection (true direct on 5432, or the Supabase **session pooler** `...pooler.supabase.com:5432`) — NOT the transaction pooler (6543). `drizzle-kit migrate` runs the whole batch in one transaction and silently fails over the transaction pooler.
+
+#### Migration journal — never let it drift (2026-07 incident)
+- **Every** migration `.sql` file MUST have exactly one entry in `db/migrations/meta/_journal.json` with a matching `tag`. `drizzle-kit migrate` reads the journal, not the folder — a `.sql` file with no journal entry is **never applied**. This is exactly how RLS/audit_log/pgvector silently never shipped (files 0004–0007 existed but were absent from the journal).
+- Never hand-delete, reorder, or renumber `_journal.json` entries. `idx` must stay a contiguous `0..N` sequence with monotonic `when` timestamps.
+- Prefer `npm run db:generate` (writes the SQL, the journal entry, AND the `meta/NNNN_snapshot.json` together). Hand-written raw-SQL migrations (RLS/policies/pgvector that Drizzle's schema diff can't express) are allowed, but you must add the journal entry manually — and be aware they have **no snapshot**, so a later `db:generate` diffs against the last snapshot and will try to re-emit them. Reconcile snapshots before running `db:generate` (currently snapshots only exist for 0000–0003; 0004–0008 are snapshot-less hand-written migrations).
+- `npm run db:check` (CI-enforced) fails if the `.sql` set and the journal set disagree, or if `idx` isn't contiguous.
 
 ### AI pipeline (human-in-the-loop)
 - AI output → `ai_drafts` table (status: `pending`)
